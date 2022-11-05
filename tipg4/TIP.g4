@@ -3,122 +3,181 @@ grammar TIP;
 
 ////////////////////// TIP Programs ////////////////////////// 
 
-program : (function)+
-;
+program: (function)+;
 
-function : nameDeclaration 
-           '(' (nameDeclaration (',' nameDeclaration)*)? ')' 
-           '{' (declaration*) (statement*) returnStmt '}' 
-;
+function:
+	nameDeclaration '(' (nameDeclaration (',' nameDeclaration)*)? ')' '{' (
+		declaration*
+	) (statement*) returnStmt '}';
 
 ////////////////////// TIP Declarations ///////////////////////// 
 
-declaration : KVAR nameDeclaration (',' nameDeclaration)* ';' ;
+declaration: KVAR nameDeclaration (',' nameDeclaration)* ';';
 
-nameDeclaration : IDENTIFIER ;
+nameDeclaration: IDENTIFIER;
 
 ////////////////////// TIP Expressions ////////////////////////// 
 
-// Expressions in TIP are ordered to capture precedence.
-// We adopt the C convention that orders operators as:
-//   postfix, unary, multiplicative, additive, relational, and equality 
-//
+// Expressions in TIP are ordered to capture precedence. We adopt the C convention that orders
+// operators as: postfix, unary, multiplicative, additive, relational, and equality
+// 
 // NB: # creates rule label that can be accessed in visitor
+// 
+// ANTLR4 can automatically refactor direct left-recursion so we place all recursive rules as
+// options in a single rule. This means that we have some complex rules here that might otherwise be
+// separated out, e.g., funAppExpr, and that we can't factor out other useful concepts, e.g.,
+// defining a rule for the subset of expressions that can be used as an l-value. We prefer a clean
+// grammar, which simplifies AST construction, and work around these issues elsewhere in the
+// compiler, e.g., introducing an assignable expr weeding pass.
+// 
 //
-// ANTLR4 can automatically refactor direct left-recursion so we
-// place all recursive rules as options in a single rule.  This
-// means that we have some complex rules here that might otherwise
-// be separated out, e.g., funAppExpr, and that we can't factor out
-// other useful concepts, e.g., defining a rule for the subset of
-// expressions that can be used as an l-value.  We prefer a clean 
-// grammar, which simplifies AST construction, and work around these
-// issues elsewhere in the compiler, e.g.,  introducing an assignable expr
-// weeding pass. 
+// 
 //
-expr : expr '(' (expr (',' expr)*)? ')' 	#funAppExpr
-     | expr '.' IDENTIFIER 			#accessExpr
-     | '*' expr 				#deRefExpr
-     | SUB NUMBER				#negNumber
-     | '&' expr					#refExpr
-     | expr op=(MUL | DIV) expr 		#multiplicativeExpr
-     | expr op=(ADD | SUB) expr 		#additiveExpr
-     | expr op=GT expr 				#relationalExpr
-     | expr op=(EQ | NE) expr 			#equalityExpr
-     | IDENTIFIER				#varExpr
-     | NUMBER					#numExpr
-     | KINPUT					#inputExpr
-     | KALLOC expr				#allocExpr
-     | KNULL					#nullExpr
-     | recordExpr				#recordRule
-     | '(' expr ')'				#parenExpr
+// 
+//
+// 
+//
+expr:
+	// Precendence 1
+	expr '(' (expr (',' expr)*)? ')'	# funAppExpr
+	| expr '.' IDENTIFIER				# accessExpr
+	| expr '[' expr ']'					# arraySubscriptExpr
+	| LEN expr  						# arrayLengthExpr
+
+	// Precendence 2: prefix unary expressions
+	| '*' expr			                # deRefExpr
+	| SUB NUMBER        	            # negNumber
+    | KNOT expr                         # logicalNotExpr   
+	| '&' expr			                # refExpr
+
+	// Precendence 3
+	| expr op = MULTIPLICATIVE_OP expr  # multiplicativeExpr
+
+	// Precendence 4
+	| expr op = ADDITIVE_OP expr        # additiveExpr
+
+	// Precendence 6
+	| expr op = INEQUALITY_OP expr      # relationalExpr
+
+	// Precendence 7
+	| expr op = EQUALITY_OP expr        # equalityExpr
+
+	// Precendence 11
+	| expr KAND expr                    # logicalAndExpr
+
+	// Precendence 12
+	| expr KOR expr                     # logicalOrExpr
+
+	// Precendence 13
+	| expr '?' expr ':' expr	        # ternaryExpr
+	| IDENTIFIER				        # varExpr
+    | NUMBER        					# numExpr
+    | BOOLEAN                           # boolExpr
+	| KINPUT					        # inputExpr
+	| KALLOC expr				        # allocExpr
+	| KNULL						        # nullExpr
+	| arrayConstructorExpr		        # arrayConstructExpr
+	| recordExpr				        # recordRule
+	| '(' expr ')'				        # parenExpr
 ;
 
-recordExpr : '{' (fieldExpr (',' fieldExpr)*)? '}' ;
+recordExpr: '{' (fieldExpr (',' fieldExpr)*)? '}';
 
-fieldExpr : IDENTIFIER ':' expr ;
+fieldExpr: IDENTIFIER ':' expr;
+
+arrayConstructorExpr: '[' (expr (',' expr)*)? ']' | '[' expr 'of' expr ']';
+
+forConditionalExpr: expr ':' expr ('..' expr ('by' expr)?)?;
 
 ////////////////////// TIP Statements ////////////////////////// 
 
-statement : blockStmt
-    | assignStmt
-    | whileStmt
-    | ifStmt
-    | outputStmt
-    | errorStmt
-;
+statement:
+	blockStmt
+	| assignStmt
+	| whileStmt
+	| forLoopStmt // * added for SIP
+	| postfixStmt // * added for SIP
+	| ifStmt
+	| outputStmt
+	| errorStmt;
 
-assignStmt : expr '=' expr ';' ;
+assignStmt: expr '=' expr ';';
 
-blockStmt : '{' (statement*) '}' ;
+blockStmt: '{' (statement*) '}';
 
-whileStmt : KWHILE '(' expr ')' statement ;
+whileStmt: KWHILE '(' expr ')' statement;
 
-ifStmt : KIF '(' expr ')' statement (KELSE statement)? ;
+ifStmt: KIF '(' expr ')' statement (KELSE statement)?;
 
-outputStmt : KOUTPUT expr ';'  ;
+outputStmt: KOUTPUT expr ';';
 
-errorStmt : KERROR expr ';'  ;
+errorStmt: KERROR expr ';';
 
-returnStmt : KRETURN expr ';'  ;
+returnStmt: KRETURN expr ';';
 
+postfixStmt: expr (op = POSTFIX_OP) ';';
+
+forLoopStmt: KFOR '(' forConditionalExpr ')' statement;
 
 ////////////////////// TIP Lexicon ////////////////////////// 
 
 // By convention ANTLR4 lexical elements use all caps
 
-MUL : '*' ;
-DIV : '/' ;
-ADD : '+' ;
-SUB : '-' ;
-GT  : '>' ;
-EQ  : '==' ;
-NE  : '!=' ;
+MUL: '*';
+DIV: '/';
+ADD: '+';
+SUB: '-';
+GT: '>';
+LT: '<';
+GTE: '>=';
+LTE: '<=';
+EQ: '==';
+NE: '!=';
+MOD: '%';
+LNOT: KNOT;
+LAND: KAND;
+LOR: KOR;
+DEC: '--';
+INC: '++';
+LEN: '#';
 
+BOOLEAN: KTRUE | KFALSE;
 NUMBER : [0-9]+ ;
 
-// Placing the keyword definitions first causes ANTLR4 to prioritize
-// their matching relative to IDENTIFIER (which comes later).
-KALLOC  : 'alloc' ;
-KINPUT  : 'input' ;
-KWHILE  : 'while' ;
-KIF     : 'if' ;
-KELSE   : 'else' ;
-KVAR    : 'var' ;
-KRETURN : 'return' ;
-KNULL   : 'null' ;
-KOUTPUT : 'output' ;
-KERROR  : 'error' ;
+INEQUALITY_OP: GT | LT | GTE | LTE;
+EQUALITY_OP: EQ | NE;
+MULTIPLICATIVE_OP: MUL | DIV | MOD;
+ADDITIVE_OP: ADD | SUB;
+POSTFIX_OP: INC | DEC;
 
-IDENTIFIER : [a-zA-Z_][a-zA-Z0-9_]* ;
+// Placing the keyword definitions first causes ANTLR4 to prioritize their matching relative to
+// IDENTIFIER (which comes later).
+KALLOC: 'alloc';
+KINPUT: 'input';
+KWHILE: 'while';
+KIF: 'if';
+KFOR: 'for';
+KELSE: 'else';
+KVAR: 'var';
+KRETURN: 'return';
+KNULL: 'null';
+KOUTPUT: 'output';
+KERROR: 'error';
+KTRUE: 'true';
+KFALSE: 'false';
+KNOT: 'not';
+KAND: 'and';
+KOR: 'or';
 
-// ANTLR4 has a nice mechanism for specifying the characters that should
-// skipped during parsing.  You write "-> skip" after the pattern and
-// let ANTLR4s pattern matching do the rest.
+IDENTIFIER: [a-zA-Z_][a-zA-Z0-9_]*;
+
+// ANTLR4 has a nice mechanism for specifying the characters that should skipped during parsing. You
+// write "-> skip" after the pattern and let ANTLR4s pattern matching do the rest.
 
 // Ignore whitespace
-WS : [ \t\n\r]+ -> skip ;
+WS: [ \t\n\r]+ -> skip;
 
 // This does not handle nested block comments.
-BLOCKCOMMENT: '/*' .*? '*/' -> skip ;
+BLOCKCOMMENT: '/*' .*? '*/' -> skip;
 
-COMMENT : '//' ~[\n\r]* -> skip ;
+COMMENT: '//' ~[\n\r]* -> skip;
