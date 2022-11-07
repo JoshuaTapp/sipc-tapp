@@ -33,3 +33,7 @@ xml/
 
 # reports
 coverage.out/
+
+# macOS
+.DS_Store
+
