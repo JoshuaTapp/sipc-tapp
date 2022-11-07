@@ -332,6 +332,7 @@ TEST_CASE("TIP Parser: Array Implicit Construction", "[TIP Parser]")
   stream << R"(
         main() {
           var x, arr1, arr2;
+          x = 1;
           arr1 = [1, 2, 3];
           arr2 = [x of arr1];
           return 0;
@@ -1058,8 +1059,14 @@ TEST_CASE("TIP Parser: iteratorForLoop.sip : iterator for loop", "[TIP Parser]")
                   }
                   return s;
                 })";
-  REQUIRE(ParserHelper::is_parsable(stream));
+  std::string expected =  "(declaration var (nameDeclaration a) , (nameDeclaration s) ;) (statement (assignStmt (expr a) = (expr (array [ (expr 5) of (expr 1) ])) ;)) (statement (assignStmt (expr s) = (expr 0) ;)) (statement (forStmt for ( (expr e) : (expr a) ) (statement (blockStmt { (statement (assignStmt (expr s) = (expr (expr s) + (expr e)) ;)) })))";
+  std::string tree = ParserHelper::parsetree(stream);
+  REQUIRE(tree.find(expected) != std::string::npos);
 }
+
+// (program (function (nameDeclaration main) ( ) { 
+//   (declaration var (nameDeclaration a) , (nameDeclaration s) ;)
+//   (statement (assignStmt (expr a) = (expr (expr array) [ (expr 5)) <missing ';'>)) statement (statement of) (statement 1 ] ;) (statement (assignStmt (expr s) = (expr 0) ;)) (statement (forStmt for ( (expr e) : (expr a) ) (statement (blockStmt { (statement (assignStmt (expr s) = (expr (expr s) + (expr e)) ;)) })))) (returnStmt return (expr s) ;) }))
 
 TEST_CASE("TIP Parser: rangeForLoop.sip : range for loop", "[TIP Parser]")
 {
@@ -1181,9 +1188,11 @@ TEST_CASE("TIP Parser: ternary.sip : ternary expressions with array constructors
 {
   std::stringstream stream;
   stream << R"(main() {
-                  return true ? [1, 2, 3] : [5 : 10];
+                  var r;
+                  r = true ? [1, 2, 3] : [5 of 10];
+                  return r;
                 })";
-  std::string expected = "return (expr (expr true) ? (expr (arrayConstructorExpr [ (expr 1) , (expr 2) , (expr 3) ])) : (expr (expr arrayConstructorExpr) [ (expr 5) : 10 ]))";
+  std::string expected = "(expr (expr true) ? (expr (array [ (expr 1) , (expr 2) , (expr 3) ])) : (expr (array [ (expr 5) of (expr 10) ])";
   std::string tree = ParserHelper::parsetree(stream);
   REQUIRE(tree.find(expected) != std::string::npos);
 }
@@ -1262,6 +1271,17 @@ TEST_CASE("TIP Parser: arrayLengthExprNonEmpty5.sip : array length expression wi
                   return 1 + #a + 2 * 3;
                 })";
   std::string expected = "return (expr (expr (expr 1) + (expr # (expr a))) + (expr (expr 2) * (expr 3)))";
+  std::string tree = ParserHelper::parsetree(stream);
+  REQUIRE(tree.find(expected) != std::string::npos);
+}
+
+TEST_CASE("TIP Parser: arrayConstructorExpr.sip : array constructor with [expr : expr] syntax", "[TIP Parser]")
+{
+  std::stringstream stream;
+  stream << R"(main() {
+                  return [1 of 10];
+                })";
+  std::string expected = "(array [ (expr 1) of (expr 10) ])";
   std::string tree = ParserHelper::parsetree(stream);
   REQUIRE(tree.find(expected) != std::string::npos);
 }

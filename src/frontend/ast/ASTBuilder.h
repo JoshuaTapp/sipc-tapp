@@ -15,10 +15,11 @@ using namespace antlrcpp;
  * This is an ANTLR4 parse tree visitor, not to be confused with an ASTVisitor.
  * As such its structure follows that of the ANTLR4 generated TIPBaseVisitor.
  * The primary entry point is the build method which initiates the traversal
- * of the parse tree and, if succesful, generates a unique ASTProgram whose 
- * ownership is transferred to the caller.  
+ * of the parse tree and, if succesful, generates a unique ASTProgram whose
+ * ownership is transferred to the caller.
  */
-class ASTBuilder : public TIPBaseVisitor {
+class ASTBuilder : public TIPBaseVisitor
+{
 private:
   TIPParser *parser;
   std::string opString(int op);
@@ -36,9 +37,9 @@ public:
 
   /**
    * a helper function to build binary expressions
-   */  
+   */
   template <typename T>
-  void visitBinaryExpr(T* ctx, const std::string& op);
+  void visitBinaryExpr(T *ctx, const std::string &op);
 
   Any visitFunction(TIPParser::FunctionContext *ctx) override;
   Any visitNegNumber(TIPParser::NegNumberContext *ctx) override;
@@ -67,4 +68,20 @@ public:
   Any visitOutputStmt(TIPParser::OutputStmtContext *ctx) override;
   Any visitErrorStmt(TIPParser::ErrorStmtContext *ctx) override;
   Any visitReturnStmt(TIPParser::ReturnStmtContext *ctx) override;
+
+  // New visit methods for the new AST nodes from deliverable 2
+  template <typename T>
+  void visitUnaryExpr(const std::string &op, T *ctx);
+
+  Any visitArrayLengthExpr(TIPParser::ArrayLengthExprContext *ctx) override;
+  Any visitArrayConstructorExpr(TIPParser::ArrayConstructorExprContext *ctx) override;
+  Any visitArraySubscriptExpr(TIPParser::ArraySubscriptExprContext *ctx) override;
+  Any visitBooleanExpr(TIPParser::BooleanExprContext *ctx) override;
+  Any visitForStmt(TIPParser::ForStmtContext *ctx) override;
+  Any visitLogicalNotExpr(TIPParser::LogicalNotExprContext *ctx) override;
+  Any visitLogicalAndExpr(TIPParser::LogicalAndExprContext *ctx) override;
+  Any visitLogicalOrExpr(TIPParser::LogicalOrExprContext *ctx) override;
+  Any visitPostfixStmt(TIPParser::PostfixStmtContext *ctx) override;
+  Any visitTernaryExpr(TIPParser::TernaryExprContext *ctx) override;
+  Any visitNegExpr(TIPParser::NegExprContext *ctx) override;
 };

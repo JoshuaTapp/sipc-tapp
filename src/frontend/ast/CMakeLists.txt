@@ -56,6 +56,24 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTVariableExpr.h
           ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTWhileStmt.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTWhileStmt.h
+          # Include new ASTNode subtypes from deliverable 2
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTArrayConstructorExpr.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTArrayConstructorExpr.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTArrayLengthExpr.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTArrayLengthExpr.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTArraySubscriptExpr.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTArraySubscriptExpr.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTBooleanExpr.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTBooleanExpr.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTForStmt.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTForStmt.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTPostfixStmt.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTPostfixStmt.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTTernaryExpr.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTTernaryExpr.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTUnaryExpr.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/treetypes/ASTUnaryExpr.cpp
+          # end of new ASTNode subtypes
           ${CMAKE_CURRENT_SOURCE_DIR}/ASTVisitor.h
           ${CMAKE_CURRENT_SOURCE_DIR}/ASTBuilder.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/ASTBuilder.h
@@ -63,7 +81,7 @@ target_sources(
 target_include_directories(
   ast
   PRIVATE ${ANTLR_TIPGrammar_OUTPUT_DIR}
-		  ${CMAKE_CURRENT_SOURCE_DIR}
+          ${CMAKE_CURRENT_SOURCE_DIR}
           ${CMAKE_CURRENT_SOURCE_DIR}/treetypes
           ${CMAKE_SOURCE_DIR}/externals/PicoSHA2
           ${CMAKE_SOURCE_DIR}/src/frontend/prettyprint
