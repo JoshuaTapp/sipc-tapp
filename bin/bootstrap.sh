@@ -98,8 +98,13 @@ bootstrap_linux() {
 
 
 bootstrap_mac_env() {
-  echo export LLVM_DIR=$(brew --prefix llvm@$LLVM_VERSION)/lib/cmake >> ~/.bashrc
-  echo export TIPCLANG=$(brew --prefix llvm@$LLVM_VERSION)/bin/clang >> ~/.bashrc
+  if [[ -z "${LLVM_DIR}" ]]; then
+    echo export LLVM_DIR=$(brew --prefix llvm@$LLVM_VERSION)/lib/cmake >> ~/.bashrc
+  fi
+  
+  if [[ -z "${TIPCLANG}" ]]; then
+    echo export TIPCLANG=$(brew --prefix llvm@$LLVM_VERSION)/bin/clang >> ~/.bashrc
+  fi
 }
 
 

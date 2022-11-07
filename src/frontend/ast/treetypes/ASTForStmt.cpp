@@ -7,8 +7,15 @@ void ASTForStmt::accept(ASTVisitor *visitor)
     {
         getE1()->accept(visitor);
         getE2()->accept(visitor);
-        getE3()->accept(visitor);
-        getE4()->accept(visitor);
+        if (getE3() != nullptr)
+        {
+            getE3()->accept(visitor);
+
+            if (getE4() != nullptr)
+            {
+                getE4()->accept(visitor);
+            }
+        }
         getBody()->accept(visitor);
     }
     visitor->endVisit(this);
@@ -38,11 +45,12 @@ std::vector<std::shared_ptr<ASTNode>> ASTForStmt::getChildren()
     if (E3 != nullptr)
     {
         children.push_back(E3);
+        if (E4 != nullptr)
+        {
+            children.push_back(E4);
+        }
     }
-    if (E4 != nullptr)
-    {
-        children.push_back(E4);
-    }
+
     children.push_back(body);
     return children;
 }

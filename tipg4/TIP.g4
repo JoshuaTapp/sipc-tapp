@@ -1,7 +1,7 @@
 grammar TIP;
 // Grammar for Moeller and Schwartzbach's Tiny Imperative Language (TIP)
 
-////////////////////// TIP Programs ////////////////////////// 
+////////////////////// TIP Programs //////////////////////////
 
 program: (function)+;
 
@@ -10,92 +10,87 @@ function:
 		declaration*
 	) (statement*) returnStmt '}';
 
-////////////////////// TIP Declarations ///////////////////////// 
+////////////////////// TIP Declarations /////////////////////////
 
 declaration: KVAR nameDeclaration (',' nameDeclaration)* ';';
 
 nameDeclaration: IDENTIFIER;
 
-////////////////////// TIP Expressions ////////////////////////// 
+////////////////////// TIP Expressions //////////////////////////
 
-// Expressions in TIP are ordered to capture precedence. We adopt the C convention that orders
-// operators as: postfix, unary, multiplicative, additive, relational, and equality
-// 
-// NB: # creates rule label that can be accessed in visitor
-// 
-// ANTLR4 can automatically refactor direct left-recursion so we place all recursive rules as
-// options in a single rule. This means that we have some complex rules here that might otherwise be
-// separated out, e.g., funAppExpr, and that we can't factor out other useful concepts, e.g.,
-// defining a rule for the subset of expressions that can be used as an l-value. We prefer a clean
-// grammar, which simplifies AST construction, and work around these issues elsewhere in the
-// compiler, e.g., introducing an assignable expr weeding pass.
-// 
-//
-// 
-//
-// 
-//
-// 
-//
+/*
+ Expressions in TIP are ordered to capture precedence. We adopt the C convention that orders
+ operators as: postfix, unary, multiplicative, additive, relational, and equality
+
+ NB: # creates rule label that can be accessed in visitor
+
+ ANTLR4 can automatically refactor direct left-recursion so we place all recursive rules as options
+ in a single rule. This means that we have some complex rules here that might otherwise be separated
+ out, e.g., funAppExpr, and that we can't factor out other useful concepts, e.g., defining a rule
+ for the subset of expressions that can be used as an l-value. We prefer a clean grammar, which
+ simplifies AST construction, and work around these issues elsewhere in the compiler, e.g.,
+ introducing an assignable expr weeding pass.
+ */
+
 expr:
 	// Precendence 1
 	expr '(' (expr (',' expr)*)? ')'	# funAppExpr
 	| expr '.' IDENTIFIER				# accessExpr
-	| expr '[' expr ']'					# arraySubscriptExpr
-	| LEN expr  						# arrayLengthExpr
+	| expr LSBR expr RSBR				# arraySubscriptExpr
 
 	// Precendence 2: prefix unary expressions
-	| '*' expr			                # deRefExpr
-	| SUB NUMBER        	            # negNumber
-    | KNOT expr                         # logicalNotExpr   
-	| '&' expr			                # refExpr
+	| LEN expr			# arrayLengthExpr
+	| '*' expr			# deRefExpr
+	| op = LNOT expr	# logicalNotExpr
+	| '&' expr			# refExpr
+	| SUB NUMBER		# negNumber
+	| op = SUB expr 	# negExpr
 
 	// Precendence 3
-	| expr op = MULTIPLICATIVE_OP expr  # multiplicativeExpr
+	| expr op = (MUL | DIV | MOD) expr # multiplicativeExpr
 
 	// Precendence 4
-	| expr op = ADDITIVE_OP expr        # additiveExpr
+	| expr op = (ADD | SUB) expr # additiveExpr
 
 	// Precendence 6
-	| expr op = INEQUALITY_OP expr      # relationalExpr
+	| expr op = (GT | LT | GTE | LTE) expr # relationalExpr
 
 	// Precendence 7
-	| expr op = EQUALITY_OP expr        # equalityExpr
+	| expr op = (EQ | NE) expr # equalityExpr
 
 	// Precendence 11
-	| expr KAND expr                    # logicalAndExpr
+	| expr op = LAND expr # logicalAndExpr
 
 	// Precendence 12
-	| expr KOR expr                     # logicalOrExpr
+	| expr op = LOR expr # logicalOrExpr
 
 	// Precendence 13
-	| expr '?' expr ':' expr	        # ternaryExpr
-	| IDENTIFIER				        # varExpr
-    | NUMBER        					# numExpr
-    | BOOLEAN                           # boolExpr
-	| KINPUT					        # inputExpr
-	| KALLOC expr				        # allocExpr
-	| KNULL						        # nullExpr
-	| arrayConstructorExpr		        # arrayConstructExpr
-	| recordExpr				        # recordRule
-	| '(' expr ')'				        # parenExpr
-;
+	| expr '?' expr ':' expr # ternaryExpr
+
+	// ETC
+	| IDENTIFIER	# varExpr
+	| NUMBER		# numExpr
+	| BOOLEAN		# booleanExpr
+	| KINPUT		# inputExpr
+	| KALLOC expr	# allocExpr
+	| KNULL			# nullExpr
+	| array			# arrayConstructorExpr
+	| recordExpr	# recordRule
+	| '(' expr ')'	# parenExpr;
 
 recordExpr: '{' (fieldExpr (',' fieldExpr)*)? '}';
 
 fieldExpr: IDENTIFIER ':' expr;
 
-arrayConstructorExpr: '[' (expr (',' expr)*)? ']' | '[' expr 'of' expr ']';
+array: LSBR expr OF expr RSBR | LSBR (expr (',' expr)*)? RSBR;
 
-forConditionalExpr: expr ':' expr ('..' expr ('by' expr)?)?;
-
-////////////////////// TIP Statements ////////////////////////// 
+////////////////////// TIP Statements //////////////////////////
 
 statement:
 	blockStmt
 	| assignStmt
 	| whileStmt
-	| forLoopStmt // * added for SIP
+	| forStmt // * added for SIP
 	| postfixStmt // * added for SIP
 	| ifStmt
 	| outputStmt
@@ -115,11 +110,12 @@ errorStmt: KERROR expr ';';
 
 returnStmt: KRETURN expr ';';
 
-postfixStmt: expr (op = POSTFIX_OP) ';';
+postfixStmt: expr op = (DEC | INC) ';';
 
-forLoopStmt: KFOR '(' forConditionalExpr ')' statement;
+forStmt:
+	KFOR '(' expr ':' expr (DDOT expr (BY expr)?)? ')' statement;
 
-////////////////////// TIP Lexicon ////////////////////////// 
+////////////////////// TIP Lexicon //////////////////////////
 
 // By convention ANTLR4 lexical elements use all caps
 
@@ -140,15 +136,14 @@ LOR: KOR;
 DEC: '--';
 INC: '++';
 LEN: '#';
+LSBR: '[';
+RSBR: ']';
+BY: 'by';
+OF: 'of';
+DDOT: '..';
 
-BOOLEAN: KTRUE | KFALSE;
-NUMBER : [0-9]+ ;
-
-INEQUALITY_OP: GT | LT | GTE | LTE;
-EQUALITY_OP: EQ | NE;
-MULTIPLICATIVE_OP: MUL | DIV | MOD;
-ADDITIVE_OP: ADD | SUB;
-POSTFIX_OP: INC | DEC;
+NUMBER: [0-9]+;
+BOOLEAN: (KTRUE | KFALSE);
 
 // Placing the keyword definitions first causes ANTLR4 to prioritize their matching relative to
 // IDENTIFIER (which comes later).

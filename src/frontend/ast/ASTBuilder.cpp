@@ -589,7 +589,7 @@ Any ASTBuilder::visitArrayConstructorExpr(TIPParser::ArrayConstructorExprContext
    * Our parser is case-sensitive, so we only check the lowercase version.
    */
   bool implicit = (ctx->array()->OF()->getText() == "of") ? true : false;
-  std::vector<std::shared_ptr<ASTExpr>> arrayExprs;
+  std::vector<std::unique_ptr<ASTExpr>> arrayExprs;
 
   if (implicit)
   {
@@ -765,7 +765,7 @@ Any ASTBuilder::visitLogicalOrExpr(TIPParser::LogicalOrExprContext *ctx)
 } // LCOV_EXCL_LINE
 
 template <typename T>
-void ASTBuilder::visitUnaryExpr(const std::string &op, T *ctx)
+void ASTBuilder::visitUnaryExpr(T *ctx, const std::string &op)
 {
   visit(ctx->expr());
   auto expr = std::move(visitedExpr);
@@ -780,12 +780,12 @@ void ASTBuilder::visitUnaryExpr(const std::string &op, T *ctx)
 
 Any ASTBuilder::visitNegExpr(TIPParser::NegExprContext *ctx)
 {
-  visitUnaryExpr(opString(ctx->op->getType()), ctx);
+  visitUnaryExpr(ctx, opString(ctx->op->getType()));
   return "";
 } // LCOV_EXCL_LINE
 
 Any ASTBuilder::visitLogicalNotExpr(TIPParser::LogicalNotExprContext *ctx)
 {
-  visitUnaryExpr(opString(ctx->op->getType()), ctx);
+  visitUnaryExpr(ctx, opString(ctx->op->getType()));
   return "";
 } // LCOV_EXCL_LINE

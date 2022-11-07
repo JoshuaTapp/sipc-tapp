@@ -12,7 +12,12 @@ void ASTUnaryExpr::accept(ASTVisitor *visitor)
 
 std::ostream &ASTUnaryExpr::print(std::ostream &out) const
 {
-    out << getOp() << *getExpr();
+    out << getOp();
+    if (getOp() == "not")
+    {
+        out << " ";
+    }
+    out << *getExpr();
     return out;
 }
 

@@ -70,6 +70,8 @@ public:
   virtual bool visit(ASTForStmt *element) override;
   virtual void endVisit(ASTForStmt *element) override;
 
+  /* End changes for Deliverable 2 */
+
 private:
   std::string indent() const;
   int indentLevel = 0;

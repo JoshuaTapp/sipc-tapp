@@ -277,8 +277,7 @@ void PrettyPrinter::endVisit(ASTArrayConstructorExpr *element)
   }
   else
   {
-    int arrLength = element->getElements().size();
-    visitResults.push_back("[" + joinWithDelim(visitResults, ", ", arrLength, 1) + "]");
+    visitResults.push_back("[" + joinWithDelim(visitResults, ", ", element->getElements().size(), 1) + "]");
   }
 }
 

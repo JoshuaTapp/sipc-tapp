@@ -71,7 +71,7 @@ public:
 
   // New visit methods for the new AST nodes from deliverable 2
   template <typename T>
-  void visitUnaryExpr(const std::string &op, T *ctx);
+  void visitUnaryExpr(T *ctx, const std::string &op);
 
   Any visitArrayLengthExpr(TIPParser::ArrayLengthExprContext *ctx) override;
   Any visitArrayConstructorExpr(TIPParser::ArrayConstructorExprContext *ctx) override;
