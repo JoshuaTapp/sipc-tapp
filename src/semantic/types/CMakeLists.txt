@@ -12,6 +12,8 @@ target_sources(
     ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipFunction.h
     ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipInt.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipInt.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipBool.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipBool.h
     ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipMu.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipMu.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipMu.h

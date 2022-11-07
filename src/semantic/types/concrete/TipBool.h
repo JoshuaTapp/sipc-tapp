@@ -5,14 +5,15 @@
 #include <string>
 
 /*!
- * \class TipInt
+ * \class TipBool
  *
- * \brief A proper type representing an int
+ * \brief A proper type representing a bool
  */
-class TipInt : public TipCons
+
+class TipBool : public TipCons
 {
 public:
-    TipInt();
+    TipBool();
 
     bool operator==(const TipType &other) const override;
     bool operator!=(const TipType &other) const override;
