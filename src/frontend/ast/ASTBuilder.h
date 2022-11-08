@@ -2,8 +2,8 @@
 
 #include "AST.h"
 
-#include "TIPParser.h"
 #include "TIPBaseVisitor.h"
+#include "TIPParser.h"
 #include "antlr4-runtime.h"
 
 #include <string>
@@ -18,8 +18,7 @@ using namespace antlrcpp;
  * of the parse tree and, if succesful, generates a unique ASTProgram whose
  * ownership is transferred to the caller.
  */
-class ASTBuilder : public TIPBaseVisitor
-{
+class ASTBuilder : public TIPBaseVisitor {
 private:
   TIPParser *parser;
   std::string opString(int op);
@@ -38,14 +37,13 @@ public:
   /**
    * a helper function to build binary expressions
    */
-  template <typename T>
-  void visitBinaryExpr(T *ctx, const std::string &op);
+  template <typename T> void visitBinaryExpr(T *ctx, const std::string &op);
 
   Any visitFunction(TIPParser::FunctionContext *ctx) override;
-  Any visitNegNumber(TIPParser::NegNumberContext *ctx) override;
   Any visitAdditiveExpr(TIPParser::AdditiveExprContext *ctx) override;
   Any visitRelationalExpr(TIPParser::RelationalExprContext *ctx) override;
-  Any visitMultiplicativeExpr(TIPParser::MultiplicativeExprContext *ctx) override;
+  Any visitMultiplicativeExpr(
+      TIPParser::MultiplicativeExprContext *ctx) override;
   Any visitEqualityExpr(TIPParser::EqualityExprContext *ctx) override;
   Any visitParenExpr(TIPParser::ParenExprContext *ctx) override;
   Any visitNumExpr(TIPParser::NumExprContext *ctx) override;
@@ -70,12 +68,13 @@ public:
   Any visitReturnStmt(TIPParser::ReturnStmtContext *ctx) override;
 
   // New visit methods for the new AST nodes from deliverable 2
-  template <typename T>
-  void visitUnaryExpr(T *ctx, const std::string &op);
+  template <typename T> void visitUnaryExpr(T *ctx, const std::string &op);
 
   Any visitArrayLengthExpr(TIPParser::ArrayLengthExprContext *ctx) override;
-  Any visitArrayConstructorExpr(TIPParser::ArrayConstructorExprContext *ctx) override;
-  Any visitArraySubscriptExpr(TIPParser::ArraySubscriptExprContext *ctx) override;
+  Any visitArrayConstructorExpr(
+      TIPParser::ArrayConstructorExprContext *ctx) override;
+  Any visitArraySubscriptExpr(
+      TIPParser::ArraySubscriptExprContext *ctx) override;
   Any visitBooleanExpr(TIPParser::BooleanExprContext *ctx) override;
   Any visitForStmt(TIPParser::ForStmtContext *ctx) override;
   Any visitLogicalNotExpr(TIPParser::LogicalNotExprContext *ctx) override;

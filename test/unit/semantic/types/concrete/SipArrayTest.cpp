@@ -39,6 +39,33 @@ TEST_CASE("TipArray: Test TipArrays are compared by their underlying term: Expec
     REQUIRE_FALSE(tipArray == tipArray3);
   }
 }
+TEST_CASE("TipArray: Test TipArray operators" "[TipArray]") {
+  auto term = std::make_shared<TipBoolean>();
+  TipArray tipArray(term);
+
+  SECTION("Equal when terms are the same") {
+    auto term2 = std::make_shared<TipBoolean>();
+    TipArray tipArray2(term2);
+    REQUIRE_FALSE(tipArray != tipArray2);
+  }
+
+  SECTION("Not equal when terms are different") {
+    auto term3 = std::make_shared<TipInt>();
+    TipArray tipArray3(term3);
+    REQUIRE(tipArray != tipArray3);
+  }
+
+  SECTION("Not equal when terms are different - op(==) returns false") {
+    auto term3 = std::make_shared<TipInt>();
+    TipArray tipArray3(term3);
+    REQUIRE_FALSE(tipArray == tipArray3);
+  }
+}
+
+// TEST_CASE("TipArray: Test TipArray operators" "[TipArray]") {
+//   TipArray arr(std::make_shared<>());
+//   REQUIRE_FALSE(nullptr == dynamic_cast<TipArray *>(&arr));
+// }
 
 TEST_CASE("TipArray: Test arity is one" "[TipArray]") {
   auto term = std::make_shared<TipInt>();

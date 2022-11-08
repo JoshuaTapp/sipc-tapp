@@ -55,14 +55,14 @@ public:
     void endVisit(ASTWhileStmt *element) override;
 
     // * Begin new type constraints for the new AST nodes from deliverable 2
-    // void endVisit(ASTArrayConstructorExpr *element) override;
-    // void endVisit(ASTArrayLengthExpr *element) override;
-    // void endVisit(ASTArraySubscriptExpr *element) override;
+    void endVisit(ASTArrayConstructorExpr *element) override;
+    void endVisit(ASTArrayLengthExpr *element) override;
+    void endVisit(ASTArraySubscriptExpr *element) override;
     void endVisit(ASTBooleanExpr *element) override;
-    // void endVisit(ASTForStmt *element) override;
-    // void endVisit(ASTPostfixStmt *element) override;
-    // void endVisit(ASTTernaryExpr *element) override;
-    // void endVisit(ASTUnaryExpr *element) override;
+    void endVisit(ASTForStmt *element) override;
+    void endVisit(ASTPostfixStmt *element) override;
+    void endVisit(ASTTernaryExpr *element) override;
+    void endVisit(ASTUnaryExpr *element) override;
 
 protected:
     std::unique_ptr<ConstraintHandler> constraintHandler;

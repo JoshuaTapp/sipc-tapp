@@ -347,6 +347,29 @@ TEST_CASE("ASTNodeTest: ASTArrayConstructorExpr: explicit syntax", "[ASTNode]")
   }
 }
 
+TEST_CASE("ASTNodeTest: ASTArrayConstructorExpr: explicit syntax empty array", "[ASTNode]")
+{
+  std::vector<std::unique_ptr<ASTExpr>> exprList;
+
+  auto arrayConstructor = std::make_unique<ASTArrayConstructorExpr>(std::move(exprList), false);
+
+  // Test Print Method
+  std::stringstream nodePrintStream;
+  nodePrintStream << *arrayConstructor;
+  REQUIRE(nodePrintStream.str() == "[]");
+
+  // Test getChildren
+  auto children = arrayConstructor->getChildren();
+  REQUIRE(children.size() == 0);
+
+  // Test accept
+  RecordPostPrint visitor;
+  arrayConstructor->accept(&visitor);
+
+  std::string expected[] = {"[]"};
+  REQUIRE(visitor.postPrintStrings[0] == expected[0]);
+}
+
 TEST_CASE("ASTNodeTest: ASTArrayConstructorExpr: implicit syntax", "[ASTNode]")
 {
   auto expr1 = std::make_unique<ASTNumberExpr>(42);
