@@ -9,7 +9,8 @@
  * \brief Abstract base class for all proper types
  *
  * This virtual type adds common functionality for composite types
- * that have type sub-expressions.  
+ * that have type sub-expressions.
+ * \
  */
 class TipCons: public TipType {
 public:
@@ -17,6 +18,7 @@ public:
 
     const std::vector<std::shared_ptr<TipType>> &getArguments() const;
     void setArguments(std::vector<std::shared_ptr<TipType>> &args);
+    //! arity returns the size of the arguments  vector
     virtual int arity() const;
     bool doMatch(TipType const * t) const;
 
@@ -26,4 +28,3 @@ protected:
     TipCons(std::vector<std::shared_ptr<TipType>> arguments);
     std::vector<std::shared_ptr<TipType>> arguments ;
 };
-

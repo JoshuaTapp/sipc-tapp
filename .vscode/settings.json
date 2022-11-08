@@ -116,5 +116,6 @@
   "C_Cpp.vcFormat.space.withinExpressionParentheses": true,
   "C_Cpp.vcFormat.space.withinLambdaBrackets": true,
   "C_Cpp.vcFormat.space.withinParameterListParentheses": true,
-  "C_Cpp.vcFormat.space.withinSquareBrackets": true
+  "C_Cpp.vcFormat.space.withinSquareBrackets": true,
+  "C_Cpp.clang_format_fallbackStyle": "LLVM"
 }

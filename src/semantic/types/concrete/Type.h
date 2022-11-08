@@ -8,13 +8,14 @@
  * TIP type hierarchy.
  */
 
+#include "TipAbsentField.h"
 #include "TipAlpha.h"
+#include "TipArray.h"
+#include "TipBoolean.h"
 #include "TipFunction.h"
 #include "TipInt.h"
 #include "TipMu.h"
 #include "TipRecord.h"
-#include "TipAbsentField.h"
 #include "TipRef.h"
 #include "TipType.h"
 #include "TipVar.h"
-#include "TipBool.h"
