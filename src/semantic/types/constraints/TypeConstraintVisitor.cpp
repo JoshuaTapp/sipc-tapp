@@ -96,29 +96,17 @@ void TypeConstraintVisitor::endVisit(ASTNumberExpr *element) {
  *    or
  *  [[E1 op E2]] = bool
  *
- * and if "op" is  equality, disequality, inequality, or logical and/or
- *   [[E1]] = [[E2]] = bool
- * otherwise
- *   [[E1]] = [[E2]] = int
+ * where op is +, -, *, /, %, <, >, <=, >=, ==, !=
+ *   [[E1 op E2]] = int
+ * where op is "and" or "or"
+ *  [[E1 op E2]] = bool
  */
 void TypeConstraintVisitor::endVisit(ASTBinaryExpr *element) {
-  auto op = element->getOp();
-
-  // result type is integer
-  constraintHandler->handle(astToVar(element), std::make_shared<TipInt>());
-
-  if (op == "*" || op == "/" || op == "+" || op == "-" || op == "%") {
-    // operands are integer
-    constraintHandler->handle(astToVar(element->getLeft()),
-                              std::make_shared<TipInt>());
-    constraintHandler->handle(astToVar(element->getRight()),
-                              std::make_shared<TipInt>());
+  if (element->getOp() == "and" || element->getOp() == "or") {
+    constraintHandler->handle(astToVar(element),
+                              std::make_shared<TipBoolean>());
   } else {
-    // operands have the same type (boolean)
-    constraintHandler->handle(astToVar(element->getLeft()),
-                              std::make_shared<TipBoolean>());
-    constraintHandler->handle(astToVar(element->getRight()),
-                              std::make_shared<TipBoolean>());
+    constraintHandler->handle(astToVar(element), std::make_shared<TipInt>());
   }
 }
 
@@ -197,8 +185,8 @@ void TypeConstraintVisitor::endVisit(ASTNullExpr *element) {
  *   [[E1]] = &[[E2]]
  *
  * Note that these are slightly more general than the rules in the SPA book.
- * The first allows for record expressions on the left hand side and the second
- * allows for more complex assignments, e.g., "**p = &x"
+ * The first allows for record expressions on the left hand side and the
+ * second allows for more complex assignments, e.g., "**p = &x"
  */
 void TypeConstraintVisitor::endVisit(ASTAssignStmt *element) {
   // If this is an assignment through a pointer, use the second rule above
@@ -225,7 +213,7 @@ void TypeConstraintVisitor::endVisit(ASTWhileStmt *element) {
 /*! \brief Type constraints for if statement.
  *
  * Type rules for "if (E) S1 else S2":
- *   [[E]] = int
+ *   [[E]] = bool
  */
 void TypeConstraintVisitor::endVisit(ASTIfStmt *element) {
   constraintHandler->handle(astToVar(element->getCondition()),
@@ -326,8 +314,8 @@ void TypeConstraintVisitor::endVisit(ASTBooleanExpr *element) {
 void TypeConstraintVisitor::endVisit(ASTArrayConstructorExpr *element) {
   auto elements = element->getElements();
 
-  // * if statement handles explicit array constructor of the form [E1,..., En]
-  // ?  all elements must be the same type
+  // * if statement handles explicit array constructor of the form [E1,...,
+  // En] ?  all elements must be the same type
   if (!element->isImplicit()) {
     // * if there are no elements, then the type is a pointer to an alpha
     if (elements.size() == 0) {
@@ -380,11 +368,10 @@ void TypeConstraintVisitor::endVisit(ASTArrayLengthExpr *element) {
  *   if op is "not" then [[E]] = bool
  */
 void TypeConstraintVisitor::endVisit(ASTUnaryExpr *element) {
-  if (element->getOp() == "-") {
-    constraintHandler->handle(astToVar(element->getExpr()),
-                              std::make_shared<TipInt>());
-  } else if (element->getOp() == "not") {
-    constraintHandler->handle(astToVar(element->getExpr()),
+  if (dynamic_cast<ASTNumberExpr *>(element)) {
+    constraintHandler->handle(astToVar(element), std::make_shared<TipInt>());
+  } else {
+    constraintHandler->handle(astToVar(element),
                               std::make_shared<TipBoolean>());
   }
 }
