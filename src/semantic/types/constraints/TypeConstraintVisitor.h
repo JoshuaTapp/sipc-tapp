@@ -63,7 +63,7 @@ public:
     void endVisit(ASTPostfixStmt *element) override;
     void endVisit(ASTTernaryExpr *element) override;
     void endVisit(ASTUnaryExpr *element) override;
-
+    // * End new type constraints for the new AST nodes from deliverable 2
 protected:
     std::unique_ptr<ConstraintHandler> constraintHandler;
 

@@ -91,22 +91,66 @@ void TypeConstraintVisitor::endVisit(ASTNumberExpr *element) {
 
 /*! \brief Type constraints for binary operator.
  *
+ * \parblock [(Explanation of ASTBinaryExpr Constraint)]
+ * Because ASTBinaryExpr handles both arithmetic and boolean operators
+ * we need to check the type of the operator to determine the type of the
+ * expression. The type of the expression is determined by the type of the
+ * operator and the type of the operands.
+ *
+ * Arithmetic operators (+, -, *, /, %) have integer operands and return an
+ * integer.
+ *
+ * Relational operators (<, <=, >, >=) have integer operands and return a
+ * boolean.
+ *
+ * Boolean operators ("and", "or") have boolean operands and return a boolean.
+ *
+ * Equality operators (==, !=) have operands of the same type and return a
+ * boolean.
+ * \endparblock
+ *
  * Type rules for "E1 op E2":
  *   [[E1 op E2]] = int
  *    or
  *  [[E1 op E2]] = bool
  *
- * where op is +, -, *, /, %, <, >, <=, >=, ==, !=
- *   [[E1 op E2]] = int
- * where op is "and" or "or"
- *  [[E1 op E2]] = bool
+ * where op is +, -, *, /, %
+ *    [[E1]] = [[E2]] = int
+ *    [[E1 op E2]] = int
+ *
+ * where op is <, <=, >, >=
+ *    [[E1]] = [[E2]] = int
+ *    [[E1 op E2]] = bool
+ *
+ * where op is "and", "or"
+ *   [[E1]] = [[E2]] = bool
+ *   [[E1 op E2]] = bool
+ *
+ * where op is ==, !=
+ *    [[E1]] = [[E2]]
+ *    [[E1 op E2]] = bool
  */
 void TypeConstraintVisitor::endVisit(ASTBinaryExpr *element) {
-  if (element->getOp() == "and" || element->getOp() == "or") {
-    constraintHandler->handle(astToVar(element),
-                              std::make_shared<TipBoolean>());
-  } else {
-    constraintHandler->handle(astToVar(element), std::make_shared<TipInt>());
+  std::string op = element->getOp();
+  auto intType = std::make_shared<TipInt>();
+  auto boolType = std::make_shared<TipBoolean>();
+
+  if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%") {
+    constraintHandler->handle(astToVar(element->getLeft()), intType);
+    constraintHandler->handle(astToVar(element->getRight()), intType);
+    constraintHandler->handle(astToVar(element), intType);
+  } else if (op == "<" || op == "<=" || op == ">" || op == ">=") {
+    constraintHandler->handle(astToVar(element->getLeft()), intType);
+    constraintHandler->handle(astToVar(element->getRight()), intType);
+    constraintHandler->handle(astToVar(element), boolType);
+  } else if (op == "and" || op == "or") {
+    constraintHandler->handle(astToVar(element->getLeft()), boolType);
+    constraintHandler->handle(astToVar(element->getRight()), boolType);
+    constraintHandler->handle(astToVar(element), boolType);
+  } else if (op == "==" || op == "!=") {
+    constraintHandler->handle(astToVar(element->getLeft()),
+                              astToVar(element->getRight()));
+    constraintHandler->handle(astToVar(element), boolType);
   }
 }
 
@@ -362,15 +406,29 @@ void TypeConstraintVisitor::endVisit(ASTArrayLengthExpr *element) {
 
 /*! \brief Type constraints for unary expression.
  *
- * Type rules for "op E":
- *    if op is "-" then [[E]] = int
+ * \parblock [(Explanation of ASTUnaryExpr Constraints)]
+ * ASTUnaryExpr both handles arithmetic and boolean negation expressions.
  *
- *   if op is "not" then [[E]] = bool
+ * With arithmetic negation, the type of the operand must be int and
+ * the type of the expression is int.
+ *
+ * With boolean negation, the type of the operand must be bool and
+ * the type of the expression is bool.
+ * \endparblock
+ *
+ * Type rules for "op E":
+ *    [[-E]] = [[E]] = int
+ * or
+ *    [[not E]] = [[E]] = bool
  */
 void TypeConstraintVisitor::endVisit(ASTUnaryExpr *element) {
-  if (dynamic_cast<ASTNumberExpr *>(element)) {
+  if (element->getOp() == "-") {
+    constraintHandler->handle(astToVar(element->getExpr()),
+                              std::make_shared<TipInt>());
     constraintHandler->handle(astToVar(element), std::make_shared<TipInt>());
-  } else {
+  } else if (element->getOp() == "not") {
+    constraintHandler->handle(astToVar(element->getExpr()),
+                              std::make_shared<TipBoolean>());
     constraintHandler->handle(astToVar(element),
                               std::make_shared<TipBoolean>());
   }

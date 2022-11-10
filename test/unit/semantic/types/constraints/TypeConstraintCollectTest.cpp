@@ -101,7 +101,6 @@ TEST_CASE("TypeConstraintVisitor: if ", "[TypeConstraintVisitor]") {
   program << R"(
       foo() {
         var x;
-        x = 5;
         if (x > 0) {
           x = x + 1;
         }
@@ -115,19 +114,16 @@ TEST_CASE("TypeConstraintVisitor: if ", "[TypeConstraintVisitor]") {
    * constraints in isolation.
    */
   std::vector<std::string> expected{
-      "\u27E60@5:16\u27E7 = int",                    // const is int
-      "\u27E6(x>0)@5:12\u27E7 = int",                // binexpr is int
-      "\u27E6x@4:12\u27E7 = int",                    // operand is int
-      "\u27E60@5:16\u27E7 = int",                    // operand is int
-      "\u27E61@6:18\u27E7 = int",                    // const is int
-      "\u27E6(x+1)@6:14\u27E7 = int",                // binexpr is int
+      "\u27E60@4:16\u27E7 = int",                    // const is int
+      "\u27E6(x>0)@4:12\u27E7 = bool",               // binexpr is int
+      "\u27E60@4:16\u27E7 = int",                    // operand is int
+      "\u27E61@5:18\u27E7 = int",                    // const is int
+      "\u27E6(x+1)@5:14\u27E7 = int",                // binexpr is int
       "\u27E6x@3:12\u27E7 = int",                    // operands is int
       "\u27E61@5:18\u27E7 = int",                    // operands is int
       "\u27E6x@3:12\u27E7 = \u27E6(x+1)@5:14\u27E7", // sides of assignment have
                                                      // same type
       "\u27E6(x>0)@4:12\u27E7 = bool",               // if condition is bool
-      "\u27E6x@3:12\u27E7 = \u27E65@4:12\u27E7",     // sides of assignment have
-                                                     // same type
       "\u27E6foo@2:6\u27E7 = () -> \u27E6x@3:12\u27E7" // function type
   };
 
@@ -139,7 +135,6 @@ TEST_CASE("TypeConstraintVisitor: while ", "[TypeConstraintVisitor]") {
   program << R"(
       foo() {
         var x;
-        x = 5;
         while (x > 0) {
           x = x - 1;
         }
@@ -149,16 +144,16 @@ TEST_CASE("TypeConstraintVisitor: while ", "[TypeConstraintVisitor]") {
 
   std::vector<std::string> expected{
       "\u27E60@4:19\u27E7 = int",                    // const is int
-      "\u27E6(x>0)@4:15\u27E7 = int",                // binexpr is int
+      "\u27E6(x>0)@4:15\u27E7 = bool",               // binexpr is bool
       "\u27E6x@3:12\u27E7 = int",                    // operand is int
       "\u27E60@4:19\u27E7 = int",                    // operand is int
       "\u27E61@5:18\u27E7 = int",                    // const is int
       "\u27E6(x-1)@5:14\u27E7 = int",                // binexpr is int
       "\u27E6x@3:12\u27E7 = int",                    // operands is int
       "\u27E61@5:18\u27E7 = int",                    // operands is int
-      "\u27E6x@3:12\u27E7 = \u27E6(x-1)@5:14\u27E7", // sides of assignment have
-                                                     // same type
-      "\u27E6(x>0)@4:15\u27E7 = bool",               // while condition is int
+      "\u27E6x@3:12\u27E7 = \u27E6(x-1)@5:14\u27E7", // sides of assignment
+                                                     // have same type
+      "\u27E6(x>0)@4:15\u27E7 = bool",               // while condition is bool
       "\u27E6foo@2:6\u27E7 = () -> \u27E6x@3:12\u27E7" // function type
   };
 
@@ -223,17 +218,15 @@ TEST_CASE("TypeConstraintVisitor: main", "[TypeConstraintVisitor]") {
       }
     )";
 
-  std::
-      vector<std::string>
-          expected{
-              "\u27E60@3:15\u27E7 = int", // int constant
-              "\u27E6x@2:11\u27E7 = int", // main args are int
-              "\u27E60@3:15\u27E7 = int", // main return is int
-              "\u27E6main@2:6\u27E7 = (\u27E6x@2:11\u27E7) -> "
-              "\u27E60@3:15\u27E7" // function
-                                   // with
-                                   // arg
-          };
+  std::vector<std::string> expected{
+      "\u27E60@3:15\u27E7 = int", // int constant
+      "\u27E6x@2:11\u27E7 = int", // main args are int
+      "\u27E60@3:15\u27E7 = int", // main return is int
+      "\u27E6main@2:6\u27E7 = (\u27E6x@2:11\u27E7) -> "
+      "\u27E60@3:15\u27E7" // function
+                           // with
+                           // arg
+  };
 
   runtest(program, expected);
 }
@@ -423,5 +416,21 @@ main() {
   runtest(program, expected);
 }
 
+// Test for BinaryExpr modulo operator
+TEST_CASE("TypeConstraintVisitor: modulo", "[TypeConstraintVisitor]") {
+  std::stringstream program;
+  program << R"(
+main() {
+    return 8 % 2;
+    }
+    )";
 
-// test if-elsecma
+  std::vector<std::string> expected{
+      "\u27E68@3:11\u27E7 = int",                           // int constant
+      "\u27E62@3:15\u27E7 = int",                           // int constant
+      "\u27E6(8%2)@3:11\u27E7 = int",                       // main return int
+      "\u27E6main@2:0\u27E7 = () -> \u27E6(8%2)@3:11\u27E7" // fun declaration
+  };
+
+  runtest(program, expected);
+}
