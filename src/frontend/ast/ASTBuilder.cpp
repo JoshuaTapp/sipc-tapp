@@ -534,20 +534,13 @@ Any ASTBuilder::visitArrayConstructorExpr(
    * We double check the parser if correct, by ensuring OF()->getText() == "of".
    * Our parser is case-sensitive, so we only check the lowercase version.
    */
-  bool implicit = (ctx->array()->OF()->getText() == "of") ? true : false;
-  std::vector<std::unique_ptr<ASTExpr>> arrayExprs;
+  bool implicit = (ctx->array()->OF() != nullptr);
+  std::vector<std::unique_ptr<ASTExpr>> arrayExprs = {};
 
-  if (implicit) {
-    for (auto e : ctx->array()->expr()) {
-      visit(e);
-      arrayExprs.push_back(std::move(visitedExpr));
-    }
-  } else {
-    for (auto e : ctx->array()->expr()) {
-      visit(e);
-      arrayExprs.push_back(std::move(visitedExpr));
-    }
-  } // LCOV_EXCL_LINE
+  for (auto e : ctx->array()->expr()) {
+    visit(e);
+    arrayExprs.push_back(std::move(visitedExpr));
+  }
 
   visitedExpr = std::make_unique<ASTArrayConstructorExpr>(std::move(arrayExprs),
                                                           implicit);

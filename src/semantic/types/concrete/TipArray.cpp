@@ -3,8 +3,9 @@
 
 #include <sstream>
 
-TipArray::TipArray(std::shared_ptr<TipType> arrayType)
-    : TipCons(std::move(std::vector<std::shared_ptr<TipType>>{arrayType})) {}
+TipArray::TipArray(std::shared_ptr<TipType> arrayElements)
+    : TipCons(std::move(std::vector<std::shared_ptr<TipType>>{arrayElements})) {
+}
 
 bool TipArray::operator==(const TipType &other) const {
   auto otherTipArray = dynamic_cast<const TipArray *>(&other);
@@ -33,6 +34,6 @@ void TipArray::accept(TipTypeVisitor *visitor) {
 }
 
 std::ostream &TipArray::print(std::ostream &out) const {
-  out << *arguments.front() << "[]";
+  out << "[] " << *arguments.front();
   return out;
 }

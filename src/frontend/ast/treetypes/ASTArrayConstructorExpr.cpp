@@ -2,71 +2,60 @@
 #include "ASTVisitor.h"
 #include "ASTinternal.h"
 
-ASTArrayConstructorExpr::ASTArrayConstructorExpr(std::vector<std::unique_ptr<ASTExpr>> elements, bool implicit)
-    : implicit(implicit), elements()
-{
-    this->implicit = implicit;
+ASTArrayConstructorExpr::ASTArrayConstructorExpr(
+    std::vector<std::unique_ptr<ASTExpr>> elements, bool implicit) {
+  this->implicit = implicit;
 
-    for (auto &element : elements)
-    {
-        std::shared_ptr<ASTExpr> e = std::move(element);
-        this->elements.push_back(e);
-    }
+  for (auto &element : elements) {
+    std::shared_ptr<ASTExpr> e = std::move(element);
+    this->elements.push_back(std::move(e));
+  }
 }
 
-std::vector<ASTExpr *> ASTArrayConstructorExpr::getElements() const
-{
-    return rawRefs(elements);
+std::vector<ASTExpr *> ASTArrayConstructorExpr::getElements() const {
+  return rawRefs(elements);
 }
 
-void ASTArrayConstructorExpr::accept(ASTVisitor *visitor)
-{
-    if (visitor->visit(this))
-    {
-        for (auto &elem : getElements())
-        {
-            elem->accept(visitor);
-        }
+void ASTArrayConstructorExpr::accept(ASTVisitor *visitor) {
+  if (visitor->visit(this)) {
+    for (auto &elem : getElements()) {
+      elem->accept(visitor);
     }
-    visitor->endVisit(this);
+  }
+  visitor->endVisit(this);
 }
 
-std::ostream &ASTArrayConstructorExpr::print(std::ostream &out) const
-{
-    out << "[";
-    if (implicit)
-    {
-        out << *elements[0] << " of " << *elements[1];
-    }
-    else
-    {
-        bool skip = true;
-        for (auto &elem : getElements())
-        {
-            if (skip)
-            {
-                skip = false;
-                out << *elem;
-                continue;
-            }
-            out << ", " << *elem;
-        }
-    }
+std::ostream &ASTArrayConstructorExpr::print(std::ostream &out) const {
+  out << "[";
+  if (elements.empty()) {
     out << "]";
     return out;
-}
-
-std::vector<std::shared_ptr<ASTNode>> ASTArrayConstructorExpr::getChildren()
-{
-    std::vector<std::shared_ptr<ASTNode>> children;
-    for (auto &elem : elements)
-    {
-        children.push_back(elem);
+  }
+  if (implicit) {
+    out << *elements[0] << " of " << *elements[1];
+  } else {
+    bool skip = true;
+    for (auto &elem : getElements()) {
+      if (skip) {
+        skip = false;
+        out << *elem;
+        continue;
+      }
+      out << ", " << *elem;
     }
-    return children;
+  }
+  out << "]";
+  return out;
 }
 
-llvm::Value *ASTArrayConstructorExpr::codegen()
-{
-    return nullptr;
+std::vector<std::shared_ptr<ASTNode>> ASTArrayConstructorExpr::getChildren() {
+  std::vector<std::shared_ptr<ASTNode>> children;
+  for (auto &elem : elements) {
+    children.push_back(elem);
+  }
+  return children;
 }
+
+llvm::Value *ASTArrayConstructorExpr::codegen() {
+  return nullptr;
+} // LCOV_EXCL_LINE

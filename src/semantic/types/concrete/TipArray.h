@@ -12,7 +12,7 @@
 class TipArray : public TipCons {
 public:
   TipArray() = delete;
-  TipArray(std::shared_ptr<TipType> arrayType);
+  TipArray(std::shared_ptr<TipType> arrayElements);
 
   std::shared_ptr<TipType> getArrayType() const;
   bool operator==(const TipType &other) const override;
@@ -21,5 +21,6 @@ public:
   void accept(TipTypeVisitor *visitor) override;
 
 protected:
+  
   std::ostream &print(std::ostream &out) const override;
 };

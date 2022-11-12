@@ -93,6 +93,18 @@ void Substituter::endVisit(TipAlpha * element) {
   }
 }
 
+void Substituter::endVisit(TipBoolean * element) {
+  // Zero element in visitedTypes (a special case of Cons)
+  visitedTypes.push_back(std::make_shared<TipBoolean>());
+}
+
+void Substituter::endVisit(TipArray * element) {
+  // One element in visitedTypes (a special case of Cons)
+  auto arrayType = visitedTypes.back();
+  visitedTypes.pop_back();
+  visitedTypes.push_back(std::make_shared<TipArray>(arrayType));
+}
+
 
 /*
  * The Copier inherits all of the methods above from Substituter, but
@@ -111,5 +123,3 @@ void Copier::endVisit(TipVar * element) {
 void Copier::endVisit(TipAlpha * element) {
   visitedTypes.push_back(std::make_shared<TipAlpha>(element->getNode(), element->getName()));
 }
-
-

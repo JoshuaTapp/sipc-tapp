@@ -416,20 +416,298 @@ main() {
   runtest(program, expected);
 }
 
-// Test for BinaryExpr modulo operator
-TEST_CASE("TypeConstraintVisitor: modulo", "[TypeConstraintVisitor]") {
+TEST_CASE("TypeConstraintVisitor: modulo and arithmetic negation",
+          "[TypeConstraintVisitor]") {
   std::stringstream program;
   program << R"(
 main() {
-    return 8 % 2;
+    return -(8 % 2);
     }
     )";
 
   std::vector<std::string> expected{
-      "\u27E68@3:11\u27E7 = int",                           // int constant
-      "\u27E62@3:15\u27E7 = int",                           // int constant
-      "\u27E6(8%2)@3:11\u27E7 = int",                       // main return int
-      "\u27E6main@2:0\u27E7 = () -> \u27E6(8%2)@3:11\u27E7" // fun declaration
+      "\u27E68@3:13\u27E7 = int",                            // int constant
+      "\u27E62@3:17\u27E7 = int",                            // int constant
+      "\u27E6(8%2)@3:13\u27E7 = int",                        // main return int
+      "\u27E6-(8%2)@3:11\u27E7 = int",                       // int constant
+      "\u27E6main@2:0\u27E7 = () -> \u27E6-(8%2)@3:11\u27E7" // fun declaration
+  };
+
+  runtest(program, expected);
+}
+
+TEST_CASE("TypeConstraintVisitor: boolean op", "[TypeConstraintVisitor]") {
+  std::stringstream program;
+  program << R"(
+main() {
+    var b;
+    b = true;
+    b = b and false;
+    b = b or true;
+    b = not b;
+    return 0;
+    }
+    )";
+
+  std::vector<std::string> expected{
+      "\u27E6(b and false)@5:8\u27E7 = bool",              // and
+      "\u27E6(b or true)@6:8\u27E7 = bool",                // or
+      "\u27E60@8:11\u27E7 = int",                          // main return int
+      "\u27E6b@3:8\u27E7 = bool",                          // var is bool
+      "\u27E6b@3:8\u27E7 = \u27E6(b and false)@5:8\u27E7", // assign
+      "\u27E6b@3:8\u27E7 = \u27E6(b or true)@6:8\u27E7",   // assign
+      "\u27E6b@3:8\u27E7 = \u27E6not b@7:8\u27E7",         // assign
+      "\u27E6b@3:8\u27E7 = \u27E6true@4:8\u27E7",          // assign
+      "\u27E6false@5:14\u27E7 = bool",                     // bool constant
+      "\u27E6main@2:0\u27E7 = () -> \u27E60@8:11\u27E7",   // fun declaration
+      "\u27E6not b@7:8\u27E7 = bool",                      // not
+      "\u27E6true@4:8\u27E7 = bool",                       // bool constant
+      "\u27E6true@6:13\u27E7 = bool"                       // bool constant
+  };
+
+  runtest(program, expected);
+}
+
+TEST_CASE("TypeConstraintVisitor: explicit array constructor",
+          "[TypeConstraintVisitor]") {
+  std::stringstream program;
+  program << R"(
+      main(x) {
+        var arr;
+        arr = [1, x, 3];
+        return 0;
+      }
+    )";
+
+  std::vector<std::string> expected{
+      "\u27E6x@2:11\u27E7 = int",                           // main args are int
+      "\u27E6[1, x, 3]@4:14\u27E7 = [] \u27E61@4:15\u27E7", // array of int
+      "\u27E61@4:15\u27E7 = int",                           // int constant
+      "\u27E63@4:21\u27E7 = int",                           // int constant
+      "\u27E6arr@3:12\u27E7 = \u27E6[1, x, 3]@4:14\u27E7",  // assign
+      "\u27E60@5:15\u27E7 = int",                           // int constant
+      "\u27E61@4:15\u27E7 = \u27E61@4:15\u27E7", // array type checking
+      "\u27E63@4:21\u27E7 = \u27E61@4:15\u27E7", // array type checking
+      "\u27E6x@2:11\u27E7 = \u27E61@4:15\u27E7", // array type checking
+      "\u27E60@5:15\u27E7 = int",                // main return is int
+      "\u27E6main@2:6\u27E7 = (\u27E6x@2:11\u27E7) -> "
+      "\u27E60@5:15\u27E7" // function with arg
+
+  };
+
+  runtest(program, expected);
+}
+
+TEST_CASE("TypeConstraintVisitor: explicit array constructor empty",
+          "[TypeConstraintVisitor]") {
+  std::stringstream program;
+  program << R"(
+      main() {
+        var arr;
+        arr = [];
+        return 0;
+      }
+    )";
+
+  std::vector<std::string> expected{
+      "\u27E60@5:15\u27E7 = int",                       // int constant
+      "\u27E6arr@3:12\u27E7 = \u27E6[]@4:14\u27E7",     // assign
+      "\u27E6[]@4:14\u27E7 = [] \u03B1<[]>",            // array of alpha
+      "\u27E6main@2:6\u27E7 = () -> \u27E60@5:15\u27E7" // function return int
+  };
+
+  runtest(program, expected);
+}
+
+TEST_CASE("TypeConstraintVisitor: implicit array constructor",
+          "[TypeConstraintVisitor]") {
+  std::stringstream program;
+  program << R"(
+      main(x) {
+        var arr;
+        arr = [1 of 3];
+        return 0;
+      }
+    )";
+
+  std::vector<std::string> expected{
+      "\u27E6x@2:11\u27E7 = int",                          // main args are int
+      "\u27E6[1 of 3]@4:14\u27E7 = [] \u27E63@4:20\u27E7", // array of int
+      "\u27E61@4:15\u27E7 = int",                          // int constant
+      "\u27E63@4:20\u27E7 = int",                          // int constant
+      "\u27E6arr@3:12\u27E7 = \u27E6[1 of 3]@4:14\u27E7",  // assign
+      "\u27E60@5:15\u27E7 = int",                          // int constant
+      "\u27E60@5:15\u27E7 = int",                          // main return is int
+      "\u27E6main@2:6\u27E7 = (\u27E6x@2:11\u27E7) -> "
+      "\u27E60@5:15\u27E7" // function with arg
+
+  };
+
+  runtest(program, expected);
+}
+
+TEST_CASE("TypeConstraintVisitor: array indexing", "[TypeConstraintVisitor]") {
+  std::stringstream program;
+  program << R"(
+      main() {
+        var arr;
+        arr = [1, 2, 3];
+        return arr[1];
+      }
+    )";
+
+  std::vector<std::string> expected{
+      "\u27E61@4:15\u27E7 = int",                // int constant
+      "\u27E61@4:15\u27E7 = \u27E61@4:15\u27E7", // array type checking
+      "\u27E61@5:19\u27E7 = int",                // int constant
+      "\u27E62@4:18\u27E7 = int",                // int constant
+      "\u27E62@4:18\u27E7 = \u27E61@4:15\u27E7", // array type checking
+      "\u27E63@4:21\u27E7 = int",                // int constant
+      "\u27E63@4:21\u27E7 = \u27E61@4:15\u27E7", // array type checking
+      "\u27E6[1, 2, 3]@4:14\u27E7 = [] \u27E61@4:15\u27E7",  // array of int
+      "\u27E6arr@3:12\u27E7 = [] \u27E6arr[1]@5:15\u27E7",   // assign array of
+                                                             // int
+      "\u27E6arr@3:12\u27E7 = \u27E6[1, 2, 3]@4:14\u27E7",   // array type
+                                                             // checking
+      "\u27E6arr[1]@5:15\u27E7 = int",                       // arr[1] is int
+      "\u27E6main@2:6\u27E7 = () -> \u27E6arr[1]@5:15\u27E7" // function returns
+                                                             // int
+  };
+
+  runtest(program, expected);
+}
+
+TEST_CASE("TypeConstraintVisitor: array length", "[TypeConstraintVisitor]") {
+  std::stringstream program;
+  program << R"(
+      main() {
+        var arr;
+        arr = [1, 2, 3];
+        return #arr;
+      }
+    )";
+
+  std::vector<std::string> expected{
+      "⟦#arr@5:15⟧ = int",              // int
+      "⟦1@4:15⟧ = int",                 // int constant
+      "⟦1@4:15⟧ = ⟦1@4:15⟧",            // array type check
+      "⟦2@4:18⟧ = int",                 // int constant
+      "⟦2@4:18⟧ = ⟦1@4:15⟧",            // array type check
+      "⟦3@4:21⟧ = int",                 // int constant
+      "⟦3@4:21⟧ = ⟦1@4:15⟧",            // array type check
+      "⟦[1, 2, 3]@4:14⟧ = [] ⟦1@4:15⟧", // array of int
+      "⟦arr@3:12⟧ = [] α<arr>",         // assign (array of alpha)
+      "⟦arr@3:12⟧ = ⟦[1, 2, 3]@4:14⟧",  // assign (array of int)
+      "⟦main@2:6⟧ = () -> ⟦#arr@5:15⟧"  // function returns int
+  };
+
+  runtest(program, expected);
+}
+
+TEST_CASE("TypeConstraintVisitor: ternary operator",
+          "[TypeConstraintVisitor]") {
+  std::stringstream program;
+  program << R"(
+      main() {
+        var x;
+        x = true ? 2 : 3;
+        return x;
+      }
+    )";
+
+  std::vector<std::string> expected{
+      "\u27E62@4:19\u27E7 = int",       // int constant
+      "\u27E62@4:19\u27E7 = \u03B1<2>", // 2 is alpha - unify to int
+      "\u27E63@4:23\u27E7 = int",       // int constant
+      "\u27E63@4:23\u27E7 = \u03B1<3>", // 3 is alpha - unify to int
+      "\u27E6main@2:6\u27E7 = () -> \u27E6x@3:12\u27E7", // function returns
+                                                         // (alpha) -> int
+      "\u27E6true ? 2 : 3@4:12\u27E7 = \u03B1<true ? 2 : 3>", // ternary is
+                                                              // alpha - unify
+                                                              // to int
+      "\u27E6true@4:12\u27E7 = bool",                         // bool constant
+      "\u27E6x@3:12\u27E7 = int",                             // x is int
+      "\u27E6x@3:12\u27E7 = \u27E6true ? 2 : 3@4:12\u27E7"    // x is type of
+                                                           // ternary expression
+  };
+
+  runtest(program, expected);
+}
+
+TEST_CASE("TypeConstraintVisitor: postfix increment and decrement",
+          "[TypeConstraintVisitor]") {
+  std::stringstream program;
+  program << R"(
+      main() {
+        var x;
+        x = 1;
+        x++;
+        x--;
+        return x;
+      }
+    )";
+
+  std::vector<std::string> expected{
+      "\u27E61@4:12\u27E7 = int",                        // int constant
+      "\u27E6x++;@5:8\u27E7 = int",                      // x++ is int
+      "\u27E6x--;@6:8\u27E7 = int",                      // x-- is int
+      "\u27E6main@2:6\u27E7 = () -> \u27E6x@3:12\u27E7", // function returns int
+      "\u27E6x@3:12\u27E7 = int",                        // x is int
+      "\u27E6x@3:12\u27E7 = \u27E61@4:12\u27E7"          // sides of assignment
+                                                         // are of same type
+  };
+
+  runtest(program, expected);
+}
+
+TEST_CASE("TypeConstraintVisitor: range for loop", "[TypeConstraintVisitor]") {
+  std::stringstream program;
+  program << R"(
+      main() {
+        var x;
+        for (x : 1 .. 10 by 2) {
+        }
+        return 0;
+      }
+    )";
+
+  std::vector<std::string> expected{
+      "\u27E6x@3:12\u27E7 = int",                        // x is int
+      "\u27E61@4:17\u27E7 = int",                        // int constant
+      "\u27E610@4:22\u27E7 = int",                       // int constant
+      "\u27E62@4:28\u27E7 = int",                        // int constant
+      "\u27E6main@2:6\u27E7 = () -> \u27E60@6:15\u27E7", // function returns int
+      "\u27E60@6:15\u27E7 = int"                         // int constant
+  };
+
+  runtest(program, expected);
+}
+
+TEST_CASE("TypeConstraintVisitor: iterative for loop",
+          "[TypeConstraintVisitor]") {
+  std::stringstream program;
+  program << R"(
+      main() {
+        var x, y;
+        x = [1, 2];
+        for (y : x) {
+        }
+        return 0;
+      }
+    )";
+
+  std::vector<std::string> expected{
+      "\u27E60@7:15\u27E7 = int",                        // int constant
+      "\u27E61@4:13\u27E7 = int",                        // int constant
+      "\u27E61@4:13\u27E7 = \u27E61@4:13\u27E7",         // array type checking
+      "\u27E62@4:16\u27E7 = int",                        // int constant
+      "\u27E62@4:16\u27E7 = \u27E61@4:13\u27E7",         // array type checking
+      "\u27E6[1, 2]@4:12\u27E7 = [] \u27E61@4:13\u27E7", // array of int
+      "\u27E6main@2:6\u27E7 = () -> \u27E60@7:15\u27E7", // function returns int
+      "\u27E6x@3:12\u27E7 = [] \u27E6y@3:15\u27E7",      // array of [[y]]
+      "\u27E6x@3:12\u27E7 = \u27E6[1, 2]@4:12\u27E7", // sides of assignment are
+                                                      // of same type
+      "\u27E6y@3:15\u27E7 = \u03B1<y>"                // y is alpha -> int
   };
 
   runtest(program, expected);
