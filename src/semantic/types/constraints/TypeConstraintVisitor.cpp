@@ -364,7 +364,6 @@ void TypeConstraintVisitor::endVisit(ASTArrayConstructorExpr *element) {
     std::shared_ptr<TipType> elementType;
     // * empty array
     if (element->getElements().size() == 0) {
-      // create ASTNode with null pointer to represent \alpha
       elementType = std::make_shared<TipAlpha>(element);
       constraintHandler->handle(astToVar(element),
                                 std::make_shared<TipArray>(elementType));
