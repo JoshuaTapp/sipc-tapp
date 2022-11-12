@@ -24,7 +24,7 @@ public:
    * among type expressions, which is why we use shared_ptrs.
    *
    * \param t The type on which substitution is performed.
-   * \param v The target variable. 
+   * \param v The target variable.
    * \param s The subtitution.
    * \return An equivalent type with no occurrences of the target variable.
    */
@@ -40,6 +40,8 @@ public:
   virtual void endVisit(TipAbsentField * element) override;
   virtual void endVisit(TipRef * element) override;
   virtual void endVisit(TipVar * element) override;
+  virtual void endVisit(TipBoolean * element) override;
+  virtual void endVisit(TipArray * element) override;
 };
 
 /*! \brief Makes a copy of a TipType
@@ -56,4 +58,3 @@ public:
   virtual void endVisit(TipAlpha * element) override;
   virtual void endVisit(TipVar * element) override;
 };
-

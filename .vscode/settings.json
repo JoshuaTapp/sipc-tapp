@@ -77,7 +77,17 @@
     "utility": "cpp",
     "version": "cpp",
     "future": "cpp",
-    "*.inc": "cpp"
+    "*.inc": "cpp",
+    "bit": "cpp",
+    "condition_variable": "cpp",
+    "list": "cpp",
+    "numbers": "cpp",
+    "numeric": "cpp",
+    "queue": "cpp",
+    "semaphore": "cpp",
+    "thread": "cpp",
+    "stop_token": "cpp",
+    "cinttypes": "cpp"
   },
   "scm.countBadge": "focused",
   "scm.defaultViewMode": "tree",
@@ -116,5 +126,6 @@
   "C_Cpp.vcFormat.space.withinExpressionParentheses": true,
   "C_Cpp.vcFormat.space.withinLambdaBrackets": true,
   "C_Cpp.vcFormat.space.withinParameterListParentheses": true,
-  "C_Cpp.vcFormat.space.withinSquareBrackets": true
+  "C_Cpp.vcFormat.space.withinSquareBrackets": true,
+  "C_Cpp.clang_format_fallbackStyle": "LLVM"
 }

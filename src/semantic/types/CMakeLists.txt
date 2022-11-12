@@ -6,6 +6,10 @@ target_sources(
     ${CMAKE_CURRENT_SOURCE_DIR}/TypeInference.h
     ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipAlpha.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipAlpha.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipArray.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipArray.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipBoolean.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipBoolean.h
     ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipCons.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipCons.h
     ${CMAKE_CURRENT_SOURCE_DIR}/concrete/TipFunction.cpp

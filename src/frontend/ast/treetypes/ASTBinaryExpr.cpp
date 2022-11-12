@@ -33,3 +33,5 @@ std::vector<std::shared_ptr<ASTNode>> ASTBinaryExpr::getChildren()
   children.push_back(RIGHT);
   return children;
 }
+
+

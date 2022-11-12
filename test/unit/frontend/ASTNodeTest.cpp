@@ -4,15 +4,13 @@
 
 #include <iostream>
 
-#include <sstream>
 #include "ASTVisitor.h"
+#include <sstream>
 
-class RecordPostPrint : public ASTVisitor
-{
+class RecordPostPrint : public ASTVisitor {
 public:
   std::vector<std::string> postPrintStrings;
-  void record(ASTNode *element)
-  {
+  void record(ASTNode *element) {
     std::stringstream s;
     s << *element;
     postPrintStrings.push_back(s.str());
@@ -51,13 +49,10 @@ public:
 };
 
 // Helper function that checks for raw node pointer in list
-bool contains(std::vector<std::shared_ptr<ASTNode>> nodeList, ASTNode *nodeP)
-{
+bool contains(std::vector<std::shared_ptr<ASTNode>> nodeList, ASTNode *nodeP) {
   bool found = false;
-  for (auto &sharedNodeP : nodeList)
-  {
-    if (sharedNodeP.get() == nodeP)
-    {
+  for (auto &sharedNodeP : nodeList) {
+    if (sharedNodeP.get() == nodeP) {
       found = true;
       break;
     }
@@ -65,8 +60,7 @@ bool contains(std::vector<std::shared_ptr<ASTNode>> nodeList, ASTNode *nodeP)
   return found;
 }
 
-TEST_CASE("ASTNodeTest: ASTAssign", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTAssign", "[ASTNode]") {
   auto rhs = std::make_unique<ASTNumberExpr>(42);
   auto lhs = std::make_unique<ASTVariableExpr>("x");
 
@@ -98,14 +92,12 @@ TEST_CASE("ASTNodeTest: ASTAssign", "[ASTNode]")
   RecordPostPrint visitor;
   assign->accept(&visitor);
   std::string expected[] = {"x", "42", "x = 42;"};
-  for (int i = 0; i < 3; i++)
-  {
+  for (int i = 0; i < 3; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTAccessExpr", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTAccessExpr", "[ASTNode]") {
   auto record = std::make_unique<ASTVariableExpr>("x");
   auto field = "y";
   auto recordValue = record.get();
@@ -130,14 +122,12 @@ TEST_CASE("ASTNodeTest: ASTAccessExpr", "[ASTNode]")
   RecordPostPrint visitor;
   accessExpr->accept(&visitor);
   std::string expected[] = {"x", "(x.y)"};
-  for (int i = 0; i < 2; i++)
-  {
+  for (int i = 0; i < 2; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTErrorStmt", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTErrorStmt", "[ASTNode]") {
   auto errorArg = std::make_unique<ASTNumberExpr>(42);
   auto errorValue = errorArg.get();
 
@@ -160,15 +150,13 @@ TEST_CASE("ASTNodeTest: ASTErrorStmt", "[ASTNode]")
   RecordPostPrint visitor;
   errorStmt->accept(&visitor);
   std::string expected[] = {"42", "error 42;"};
-  for (int i = 0; i < 2; i++)
-  {
+  for (int i = 0; i < 2; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
 // test ASTFieldExpr
-TEST_CASE("ASTNodeTest: ASTFieldExpr", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTFieldExpr", "[ASTNode]") {
   auto field = "x";
   auto init = std::make_unique<ASTNumberExpr>(42);
   auto initValue = init.get();
@@ -193,25 +181,26 @@ TEST_CASE("ASTNodeTest: ASTFieldExpr", "[ASTNode]")
   RecordPostPrint visitor;
   fieldExpr->accept(&visitor);
   std::string expected[] = {"42", "x:42"};
-  for (int i = 0; i < 2; i++)
-  {
+  for (int i = 0; i < 2; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTIfStmt", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTIfStmt", "[ASTNode]") {
   auto cond = std::make_unique<ASTBooleanExpr>(true);
-  auto thenStmt = std::make_unique<ASTAssignStmt>(
-      std::make_unique<ASTVariableExpr>("x"), std::make_unique<ASTNumberExpr>(42));
-  auto elseStmt = std::make_unique<ASTAssignStmt>(
-      std::make_unique<ASTVariableExpr>("y"), std::make_unique<ASTNumberExpr>(42));
+  auto thenStmt =
+      std::make_unique<ASTAssignStmt>(std::make_unique<ASTVariableExpr>("x"),
+                                      std::make_unique<ASTNumberExpr>(42));
+  auto elseStmt =
+      std::make_unique<ASTAssignStmt>(std::make_unique<ASTVariableExpr>("y"),
+                                      std::make_unique<ASTNumberExpr>(42));
 
   auto condValue = cond.get();
   auto thenValue = thenStmt.get();
   auto elseValue = elseStmt.get();
 
-  auto ifStmt = std::make_unique<ASTIfStmt>(std::move(cond), std::move(thenStmt), std::move(elseStmt));
+  auto ifStmt = std::make_unique<ASTIfStmt>(
+      std::move(cond), std::move(thenStmt), std::move(elseStmt));
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -232,16 +221,17 @@ TEST_CASE("ASTNodeTest: ASTIfStmt", "[ASTNode]")
 }
 
 // test ASTWhileStmt getChildren
-TEST_CASE("ASTNodeTest: ASTWhileStmt", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTWhileStmt", "[ASTNode]") {
   auto cond = std::make_unique<ASTBooleanExpr>(true);
-  auto body = std::make_unique<ASTAssignStmt>(
-      std::make_unique<ASTVariableExpr>("x"), std::make_unique<ASTNumberExpr>(42));
+  auto body =
+      std::make_unique<ASTAssignStmt>(std::make_unique<ASTVariableExpr>("x"),
+                                      std::make_unique<ASTNumberExpr>(42));
 
   auto condValue = cond.get();
   auto bodyValue = body.get();
 
-  auto whileStmt = std::make_unique<ASTWhileStmt>(std::move(cond), std::move(body));
+  auto whileStmt =
+      std::make_unique<ASTWhileStmt>(std::move(cond), std::move(body));
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -260,8 +250,7 @@ TEST_CASE("ASTNodeTest: ASTWhileStmt", "[ASTNode]")
 }
 
 // test ASTRefExpr getChildren
-TEST_CASE("ASTNodeTest: ASTRefExpr", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTRefExpr", "[ASTNode]") {
   auto ref = std::make_unique<ASTVariableExpr>("x");
   auto refValue = ref.get();
 
@@ -282,8 +271,7 @@ TEST_CASE("ASTNodeTest: ASTRefExpr", "[ASTNode]")
 }
 
 // test ASTOutputStmt getChildren
-TEST_CASE("ASTNodeTest: ASTOutputStmt", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTOutputStmt", "[ASTNode]") {
   auto output = std::make_unique<ASTVariableExpr>("x");
   auto outputValue = output.get();
 
@@ -307,8 +295,8 @@ TEST_CASE("ASTNodeTest: ASTOutputStmt", "[ASTNode]")
  * TESTS FOR NEW AST NODES SUBTYPES IMPLEMENTED FOR DELIVERABLE 2
  */
 
-TEST_CASE("ASTNodeTest: ASTArrayConstructorExpr: explicit syntax", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTArrayConstructorExpr: explicit syntax",
+          "[ASTNode]") {
   auto expr1 = std::make_unique<ASTNumberExpr>(42);
   auto expr2 = std::make_unique<ASTNumberExpr>(43);
   auto expr3 = std::make_unique<ASTNumberExpr>(44);
@@ -322,7 +310,8 @@ TEST_CASE("ASTNodeTest: ASTArrayConstructorExpr: explicit syntax", "[ASTNode]")
   exprList.push_back(std::move(expr2));
   exprList.push_back(std::move(expr3));
 
-  auto arrayConstructor = std::make_unique<ASTArrayConstructorExpr>(std::move(exprList), false);
+  auto arrayConstructor =
+      std::make_unique<ASTArrayConstructorExpr>(std::move(exprList), false);
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -341,14 +330,37 @@ TEST_CASE("ASTNodeTest: ASTArrayConstructorExpr: explicit syntax", "[ASTNode]")
   arrayConstructor->accept(&visitor);
 
   std::string expected[] = {"42", "43", "44", "[42, 43, 44]"};
-  for (int i = 0; i < 4; i++)
-  {
+  for (int i = 0; i < 4; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTArrayConstructorExpr: implicit syntax", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTArrayConstructorExpr: explicit syntax empty array",
+          "[ASTNode]") {
+  std::vector<std::unique_ptr<ASTExpr>> exprList;
+
+  auto arrayConstructor =
+      std::make_unique<ASTArrayConstructorExpr>(std::move(exprList), false);
+
+  // Test Print Method
+  std::stringstream nodePrintStream;
+  nodePrintStream << *arrayConstructor;
+  REQUIRE(nodePrintStream.str() == "[]");
+
+  // Test getChildren
+  auto children = arrayConstructor->getChildren();
+  REQUIRE(children.size() == 0);
+
+  // Test accept
+  RecordPostPrint visitor;
+  arrayConstructor->accept(&visitor);
+
+  std::string expected[] = {"[]"};
+  REQUIRE(visitor.postPrintStrings[0] == expected[0]);
+}
+
+TEST_CASE("ASTNodeTest: ASTArrayConstructorExpr: implicit syntax",
+          "[ASTNode]") {
   auto expr1 = std::make_unique<ASTNumberExpr>(42);
   auto expr2 = std::make_unique<ASTNumberExpr>(43);
 
@@ -359,7 +371,8 @@ TEST_CASE("ASTNodeTest: ASTArrayConstructorExpr: implicit syntax", "[ASTNode]")
   exprList.push_back(std::move(expr1));
   exprList.push_back(std::move(expr2));
 
-  auto arrayConstructor = std::make_unique<ASTArrayConstructorExpr>(std::move(exprList), true);
+  auto arrayConstructor =
+      std::make_unique<ASTArrayConstructorExpr>(std::move(exprList), true);
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -377,14 +390,12 @@ TEST_CASE("ASTNodeTest: ASTArrayConstructorExpr: implicit syntax", "[ASTNode]")
   arrayConstructor->accept(&visitor);
 
   std::string expected[] = {"42", "43", "[42 of 43]"};
-  for (int i = 0; i < 3; i++)
-  {
+  for (int i = 0; i < 3; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTArrayLengthExpr: identifier array", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTArrayLengthExpr: identifier array", "[ASTNode]") {
   auto id = std::make_unique<ASTVariableExpr>("x");
 
   auto idValue = id.get();
@@ -406,14 +417,12 @@ TEST_CASE("ASTNodeTest: ASTArrayLengthExpr: identifier array", "[ASTNode]")
   arrayLength->accept(&visitor);
 
   std::string expected[] = {"x", "#x"};
-  for (int i = 0; i < 2; i++)
-  {
+  for (int i = 0; i < 2; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTArrayLengthExpr: array constructor", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTArrayLengthExpr: array constructor", "[ASTNode]") {
   auto expr1 = std::make_unique<ASTNumberExpr>(42);
   auto expr2 = std::make_unique<ASTNumberExpr>(43);
   auto expr3 = std::make_unique<ASTNumberExpr>(44);
@@ -427,11 +436,13 @@ TEST_CASE("ASTNodeTest: ASTArrayLengthExpr: array constructor", "[ASTNode]")
   exprList.push_back(std::move(expr2));
   exprList.push_back(std::move(expr3));
 
-  auto arrayConstructor = std::make_unique<ASTArrayConstructorExpr>(std::move(exprList), false);
+  auto arrayConstructor =
+      std::make_unique<ASTArrayConstructorExpr>(std::move(exprList), false);
 
   auto arrayConstructorValue = arrayConstructor.get();
 
-  auto arrayLength = std::make_unique<ASTArrayLengthExpr>(std::move(arrayConstructor));
+  auto arrayLength =
+      std::make_unique<ASTArrayLengthExpr>(std::move(arrayConstructor));
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -448,21 +459,21 @@ TEST_CASE("ASTNodeTest: ASTArrayLengthExpr: array constructor", "[ASTNode]")
   arrayLength->accept(&visitor);
 
   std::string expected[] = {"42", "43", "44", "#[42, 43, 44]"};
-  for (int i = 0; i < 2; i++)
-  {
+  for (int i = 0; i < 2; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTArrayLengthExpr: empty array", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTArrayLengthExpr: empty array", "[ASTNode]") {
   std::vector<std::unique_ptr<ASTExpr>> exprList;
 
-  auto arrayConstructor = std::make_unique<ASTArrayConstructorExpr>(std::move(exprList), false);
+  auto arrayConstructor =
+      std::make_unique<ASTArrayConstructorExpr>(std::move(exprList), false);
 
   auto arrayConstructorValue = arrayConstructor.get();
 
-  auto arrayLength = std::make_unique<ASTArrayLengthExpr>(std::move(arrayConstructor));
+  auto arrayLength =
+      std::make_unique<ASTArrayLengthExpr>(std::move(arrayConstructor));
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -479,21 +490,20 @@ TEST_CASE("ASTNodeTest: ASTArrayLengthExpr: empty array", "[ASTNode]")
   arrayLength->accept(&visitor);
 
   std::string expected[] = {"[]", "#[]"};
-  for (int i = 0; i < 1; i++)
-  {
+  for (int i = 0; i < 1; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTArraySubscriptExpr", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTArraySubscriptExpr", "[ASTNode]") {
   auto id = std::make_unique<ASTVariableExpr>("x");
   auto index = std::make_unique<ASTNumberExpr>(1);
 
   auto indexValue = index.get();
   auto idValue = id.get();
 
-  auto arraySubscript = std::make_unique<ASTArraySubscriptExpr>(std::move(id), std::move(index));
+  auto arraySubscript =
+      std::make_unique<ASTArraySubscriptExpr>(std::move(id), std::move(index));
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -511,14 +521,12 @@ TEST_CASE("ASTNodeTest: ASTArraySubscriptExpr", "[ASTNode]")
   arraySubscript->accept(&visitor);
 
   std::string expected[] = {"x", "1", "x[1]"};
-  for (int i = 0; i < 3; i++)
-  {
+  for (int i = 0; i < 3; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTBooleanExpr", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTBooleanExpr", "[ASTNode]") {
   auto booleanExpr = std::make_unique<ASTBooleanExpr>(true);
 
   // Test Print Method
@@ -535,14 +543,12 @@ TEST_CASE("ASTNodeTest: ASTBooleanExpr", "[ASTNode]")
   booleanExpr->accept(&visitor);
 
   std::string expected[] = {"true"};
-  for (int i = 0; i < 1; i++)
-  {
+  for (int i = 0; i < 1; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTForStmt: range loop, no step", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTForStmt: range loop, no step", "[ASTNode]") {
   auto E1 = std::make_unique<ASTVariableExpr>("x");
   auto E2 = std::make_unique<ASTNumberExpr>(1);
   auto E3 = std::make_unique<ASTNumberExpr>(10);
@@ -555,7 +561,8 @@ TEST_CASE("ASTNodeTest: ASTForStmt: range loop, no step", "[ASTNode]")
   auto E3Value = E3.get();
   auto SValue = S.get();
 
-  auto forStmt = std::make_unique<ASTForStmt>(std::move(E1), std::move(E2), std::move(E3), nullptr, std::move(S));
+  auto forStmt = std::make_unique<ASTForStmt>(
+      std::move(E1), std::move(E2), std::move(E3), nullptr, std::move(S));
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -575,14 +582,12 @@ TEST_CASE("ASTNodeTest: ASTForStmt: range loop, no step", "[ASTNode]")
   forStmt->accept(&visitor);
 
   std::string expected[] = {"x", "1", "10", "{ }", "for (x : 1 .. 10) { }"};
-  for (int i = 0; i < 5; i++)
-  {
+  for (int i = 0; i < 5; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTForStmt: range loop, with step", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTForStmt: range loop, with step", "[ASTNode]") {
   auto E1 = std::make_unique<ASTVariableExpr>("x");
   auto E2 = std::make_unique<ASTNumberExpr>(1);
   auto E3 = std::make_unique<ASTNumberExpr>(10);
@@ -597,7 +602,8 @@ TEST_CASE("ASTNodeTest: ASTForStmt: range loop, with step", "[ASTNode]")
   auto E4Value = E4.get();
   auto SValue = S.get();
 
-  auto forStmt = std::make_unique<ASTForStmt>(std::move(E1), std::move(E2), std::move(E3), std::move(E4), std::move(S));
+  auto forStmt = std::make_unique<ASTForStmt>(
+      std::move(E1), std::move(E2), std::move(E3), std::move(E4), std::move(S));
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -617,16 +623,15 @@ TEST_CASE("ASTNodeTest: ASTForStmt: range loop, with step", "[ASTNode]")
   RecordPostPrint visitor;
   forStmt->accept(&visitor);
 
-  std::string expected[] = {"x", "1", "10", "2", "{ }", "for (x : 1 .. 10 by 2) { }"};
-  for (int i = 0; i < 6; i++)
-  {
+  std::string expected[] = {"x", "1",   "10",
+                            "2", "{ }", "for (x : 1 .. 10 by 2) { }"};
+  for (int i = 0; i < 6; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
 // test ASTForStmt iterator loop
-TEST_CASE("ASTNodeTest: ASTForStmt: iterator loop", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTForStmt: iterator loop", "[ASTNode]") {
   auto E1 = std::make_unique<ASTVariableExpr>("x");
   auto E2 = std::make_unique<ASTVariableExpr>("y");
 
@@ -637,7 +642,8 @@ TEST_CASE("ASTNodeTest: ASTForStmt: iterator loop", "[ASTNode]")
   auto E2Value = E2.get();
   auto SValue = S.get();
 
-  auto forStmt = std::make_unique<ASTForStmt>(std::move(E1), std::move(E2), nullptr, nullptr, std::move(S));
+  auto forStmt = std::make_unique<ASTForStmt>(std::move(E1), std::move(E2),
+                                              nullptr, nullptr, std::move(S));
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -656,14 +662,12 @@ TEST_CASE("ASTNodeTest: ASTForStmt: iterator loop", "[ASTNode]")
   forStmt->accept(&visitor);
 
   std::string expected[] = {"x", "y", "{ }", "for (x : y) { }"};
-  for (int i = 0; i < 4; i++)
-  {
+  for (int i = 0; i < 4; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTTernaryExpr", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTTernaryExpr", "[ASTNode]") {
   auto E1 = std::make_unique<ASTVariableExpr>("x");
   auto E2 = std::make_unique<ASTNumberExpr>(1);
   auto E3 = std::make_unique<ASTNumberExpr>(2);
@@ -672,7 +676,8 @@ TEST_CASE("ASTNodeTest: ASTTernaryExpr", "[ASTNode]")
   auto E2Value = E2.get();
   auto E3Value = E3.get();
 
-  auto ternaryExpr = std::make_unique<ASTTernaryExpr>(std::move(E1), std::move(E2), std::move(E3));
+  auto ternaryExpr = std::make_unique<ASTTernaryExpr>(
+      std::move(E1), std::move(E2), std::move(E3));
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -691,14 +696,12 @@ TEST_CASE("ASTNodeTest: ASTTernaryExpr", "[ASTNode]")
   ternaryExpr->accept(&visitor);
 
   std::string expected[] = {"x", "1", "2", "x ? 1 : 2"};
-  for (int i = 0; i < 4; i++)
-  {
+  for (int i = 0; i < 4; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTUnaryExpr: logical not", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTUnaryExpr: logical not", "[ASTNode]") {
   auto E1 = std::make_unique<ASTVariableExpr>("x");
 
   auto E1Value = E1.get();
@@ -720,14 +723,12 @@ TEST_CASE("ASTNodeTest: ASTUnaryExpr: logical not", "[ASTNode]")
   unaryExpr->accept(&visitor);
 
   std::string expected[] = {"x", "not x"};
-  for (int i = 0; i < 2; i++)
-  {
+  for (int i = 0; i < 2; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTUnaryExpr: arithmetic negation", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTUnaryExpr: arithmetic negation", "[ASTNode]") {
   auto E1 = std::make_unique<ASTVariableExpr>("x");
 
   auto E1Value = E1.get();
@@ -749,21 +750,20 @@ TEST_CASE("ASTNodeTest: ASTUnaryExpr: arithmetic negation", "[ASTNode]")
   unaryExpr->accept(&visitor);
 
   std::string expected[] = {"x", "-x"};
-  for (int i = 0; i < 2; i++)
-  {
+  for (int i = 0; i < 2; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTBinaryExpr: logical and", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTBinaryExpr: logical and", "[ASTNode]") {
   auto E1 = std::make_unique<ASTVariableExpr>("x");
   auto E2 = std::make_unique<ASTVariableExpr>("y");
 
   auto E1Value = E1.get();
   auto E2Value = E2.get();
 
-  auto logicalAndExpr = std::make_unique<ASTBinaryExpr>("and", std::move(E1), std::move(E2));
+  auto logicalAndExpr =
+      std::make_unique<ASTBinaryExpr>("and", std::move(E1), std::move(E2));
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -781,21 +781,20 @@ TEST_CASE("ASTNodeTest: ASTBinaryExpr: logical and", "[ASTNode]")
   logicalAndExpr->accept(&visitor);
 
   std::string expected[] = {"x", "y", "(x and y)"};
-  for (int i = 0; i < 3; i++)
-  {
+  for (int i = 0; i < 3; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTBinaryExpr: logical or", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTBinaryExpr: logical or", "[ASTNode]") {
   auto E1 = std::make_unique<ASTVariableExpr>("x");
   auto E2 = std::make_unique<ASTVariableExpr>("y");
 
   auto E1Value = E1.get();
   auto E2Value = E2.get();
 
-  auto logicalOrExpr = std::make_unique<ASTBinaryExpr>("or", std::move(E1), std::move(E2));
+  auto logicalOrExpr =
+      std::make_unique<ASTBinaryExpr>("or", std::move(E1), std::move(E2));
 
   // Test Print Method
   std::stringstream nodePrintStream;
@@ -813,16 +812,14 @@ TEST_CASE("ASTNodeTest: ASTBinaryExpr: logical or", "[ASTNode]")
   logicalOrExpr->accept(&visitor);
 
   std::string expected[] = {"x", "y", "(x or y)"};
-  for (int i = 0; i < 3; i++)
-  {
+  for (int i = 0; i < 3; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
 // test for ASTPostfixStmt: both postfix increment and postfix decrement
 
-TEST_CASE("ASTNodeTest: ASTPostfixStmt: postfix increment", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTPostfixStmt: postfix increment", "[ASTNode]") {
   auto E1 = std::make_unique<ASTVariableExpr>("x");
 
   auto E1Value = E1.get();
@@ -844,14 +841,12 @@ TEST_CASE("ASTNodeTest: ASTPostfixStmt: postfix increment", "[ASTNode]")
   postfixStmt->accept(&visitor);
 
   std::string expected[] = {"x", "x++;"};
-  for (int i = 0; i < 2; i++)
-  {
+  for (int i = 0; i < 2; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
 
-TEST_CASE("ASTNodeTest: ASTPostfixStmt: postfix decrement", "[ASTNode]")
-{
+TEST_CASE("ASTNodeTest: ASTPostfixStmt: postfix decrement", "[ASTNode]") {
   auto E1 = std::make_unique<ASTVariableExpr>("x");
 
   auto E1Value = E1.get();
@@ -873,8 +868,7 @@ TEST_CASE("ASTNodeTest: ASTPostfixStmt: postfix decrement", "[ASTNode]")
   postfixStmt->accept(&visitor);
 
   std::string expected[] = {"x", "x--;"};
-  for (int i = 0; i < 2; i++)
-  {
+  for (int i = 0; i < 2; i++) {
     REQUIRE(visitor.postPrintStrings[i] == expected[i]);
   }
 }
