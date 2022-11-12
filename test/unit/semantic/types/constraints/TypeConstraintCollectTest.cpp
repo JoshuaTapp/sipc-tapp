@@ -712,3 +712,52 @@ TEST_CASE("TypeConstraintVisitor: iterative for loop",
 
   runtest(program, expected);
 }
+
+// test for issue #4: 2d array
+
+TEST_CASE("TypeConstraintVisitor: 2d array", "[TypeConstraintVisitor]") {
+  std::stringstream program;
+  program << R"(
+      main() {
+        var x, y;
+        x = [[1, 2], [3, 4]];
+        y = x[0][1];
+        return 0;
+      }
+    )";
+
+  std::vector<std::string> expected{
+      "\u27E60@6:15\u27E7 = int",                        // int constant
+      "\u27E61@4:14\u27E7 = int",                        // int constant
+      "\u27E62@4:17\u27E7 = int",                        // int constant
+      "\u27E63@4:22\u27E7 = int",                        // int constant
+      "\u27E64@4:25\u27E7 = int",                        // int constant
+      "\u27E60@5:14\u27E7 = int",                        // int constant
+      "\u27E61@5:17\u27E7 = int",                        // int constant
+      "\u27E61@4:14\u27E7 = \u27E61@4:14\u27E7",         // array type checking
+      "\u27E62@4:17\u27E7 = \u27E61@4:14\u27E7",         // array type checking
+      "\u27E63@4:22\u27E7 = \u27E63@4:22\u27E7",         // array type checking
+      "\u27E64@4:25\u27E7 = \u27E63@4:22\u27E7",         // array type checking
+      "\u27E6[1, 2]@4:13\u27E7 = [] \u27E61@4:14\u27E7", // array of int
+      "\u27E6[3, 4]@4:21\u27E7 = [] \u27E63@4:22\u27E7", // array of int
+      "\u27E6[1, 2]@4:13\u27E7 = \u27E6[1, 2]@4:13\u27E7", // array type
+                                                           // checking
+      "\u27E6[3, 4]@4:21\u27E7 = \u27E6[1, 2]@4:13\u27E7", // array type
+                                                           // checking
+      "\u27E6[[1, 2], [3, 4]]@4:12\u27E7 = [] \u27E6[1, 2]@4:13\u27E7", // array
+                                                                        // of
+                                                                        // array
+                                                                        // of
+                                                                        // int
+      "\u27E6x@3:12\u27E7 = \u27E6[[1, 2], [3, 4]]@4:12\u27E7", // array type
+                                                                // checking
+      "\u27E6x@3:12\u27E7 = [] \u27E6x[0]@5:12\u27E7", // array reference type
+                                                       // check
+      "\u27E6x[0]@5:12\u27E7 = [] \u27E6x[0][1]@5:12\u27E7", // x[0] is array of
+                                                             // int
+      "\u27E6y@3:15\u27E7 = \u27E6x[0][1]@5:12\u27E7",       // y is int
+      "\u27E6main@2:6\u27E7 = () -> \u27E60@6:15\u27E7" // function returns int
+  };
+
+  runtest(program, expected);
+}
