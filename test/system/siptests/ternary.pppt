@@ -1,0 +1,16 @@
+main()
+{
+  var b, r;
+  b = false;
+  r = b ? 1 : 2;
+  return r;
+}
+
+Functions : {
+  main : () -> int
+}
+
+Locals for function main : {
+  b : bool,
+  r : int
+}

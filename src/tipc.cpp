@@ -18,13 +18,14 @@ static cl::opt<bool> ppretty("pp", cl::desc("pretty print"), cl::cat(TIPcat));
 static cl::opt<bool> psym("ps", cl::desc("print symbols"), cl::cat(TIPcat));
 static cl::opt<bool> ptypes("pt", cl::desc("print symbols with types (supercedes --ps)"), cl::cat(TIPcat));
 static cl::opt<bool> disopt("do", cl::desc("disable bitcode optimization"), cl::cat(TIPcat));
+static cl::opt<bool> distype("dt", cl::desc("disable type inference for complex implicit polymorphism in SIP programs"), cl::cat(TIPcat));
 static cl::opt<int> debug("verbose", cl::desc("enable log messages (Levels 1-3) \n Level 1 - Basic logging for every phase.\n Level 2 - Level 1 and type constraints being unified.\n Level 3 - Level 2 and union-find solving steps."), cl::cat(TIPcat));
 static cl::opt<bool> emitHrAsm("asm",
                            cl::desc("emit human-readable LLVM assembly language"),
                            cl::cat(TIPcat));
-static cl::opt<std::string> cgFile("pcg", 
+static cl::opt<std::string> cgFile("pcg",
                          cl::value_desc("call graph output file"),
-                         cl::desc("print call graph to a file in dot syntax"), 
+                         cl::desc("print call graph to a file in dot syntax"),
                          cl::cat(TIPcat));
 static cl::opt<std::string> astFile("pa",
                                  cl::value_desc("AST output file"),
@@ -44,10 +45,10 @@ static cl::opt<std::string> outputfile("o",
                                     cl::cat(TIPcat));
 
 /*! \brief tipc driver.
- * 
+ *
  * This function is the entry point for tipc.   It handles command line parsing
  * using LLVM CommandLine support.  It runs the phases of the compiler in sequence.
- * If an error is detected, via an exception, it reports the error and exits.  
+ * If an error is detected, via an exception, it reports the error and exits.
  * If there is no error, then the LLVM bitcode is emitted to a file whose name
  * is the providvvved source file suffixed by ".bc".
  */
@@ -87,7 +88,7 @@ int main(int argc, char *argv[]) {
     std::shared_ptr<ASTProgram> ast = std::move(FrontEnd::parse(stream));
 
     try {
-      auto analysisResults = SemanticAnalysis::analyze(ast.get());
+      auto analysisResults = SemanticAnalysis::analyze(ast.get(), !distype);
 
 
       if (ppretty) {
@@ -141,8 +142,8 @@ int main(int argc, char *argv[]) {
       LOG_S(ERROR) << "tipc: semantic error";
       exit (EXIT_FAILURE);
     } catch (InternalError& e) { // LCOV_EXCL_LINE
-      /* Internal errors should never happen, but we have logic to catch 
-       * them just in case.  We do not want to count these lines toward 
+      /* Internal errors should never happen, but we have logic to catch
+       * them just in case.  We do not want to count these lines toward
        * coverage goals since a working compiler will never cover these.
        */
       LOG_S(ERROR) << "tipc: " << e.what(); // LCOV_EXCL_LINE

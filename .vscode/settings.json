@@ -87,7 +87,11 @@
     "semaphore": "cpp",
     "thread": "cpp",
     "stop_token": "cpp",
-    "cinttypes": "cpp"
+    "cinttypes": "cpp",
+    "codecvt": "cpp",
+    "complex": "cpp",
+    "forward_list": "cpp",
+    "regex": "cpp"
   },
   "scm.countBadge": "focused",
   "scm.defaultViewMode": "tree",

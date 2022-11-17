@@ -1,0 +1,20 @@
+main()
+{
+  var x, y;
+  x = 0;
+  y = true;
+  if (y)
+    {
+      output x;
+    }
+  return 1;
+}
+
+Functions : {
+  main : () -> int
+}
+
+Locals for function main : {
+  x : int,
+  y : bool
+}
