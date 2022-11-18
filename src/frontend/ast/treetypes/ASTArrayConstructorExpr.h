@@ -7,6 +7,7 @@
 
 class ASTArrayConstructorExpr : public ASTExpr {
   bool implicit;
+  int implicitSize;
   std::vector<std::shared_ptr<ASTExpr>> elements = {};
 
 public:

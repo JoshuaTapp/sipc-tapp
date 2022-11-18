@@ -1147,3 +1147,276 @@ llvm::Value *ASTTernaryExpr::codegen() {
 
   return Builder.CreateSelect(CondV, trueV, falseV);
 } // LCOV_EXCL_LINE
+
+llvm::Value *ASTPostfixStmt::codegen() {
+  LOG_S(1) << "Generating code for " << *this;
+
+  /*
+   * The postfix statement is a special case of a binary expression.
+   * the ASTPostfixStmt.getExpr() holds the lValue (variable) and generates
+   * a pointer to the variable (this is the assumption). The
+   * ASTPostfixStmt.getOp() holds the increment/decrement operator.
+   *
+   * Validate the lValue and get the pointer to the variable.
+   * Then load the integer value from that pointer and perform the
+   * increment/decrement operation. Then store the result back to the
+   * variable.
+   */
+
+  lValueGen = true;
+  Value *argVal = getExpr()->codegen();
+  lValueGen = false;
+  Value *rValue = nullptr;
+
+  if (argVal == nullptr) {
+    throw InternalError(
+        "failed to generate bitcode for the argument of the postfix statement");
+  }
+
+  llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  labelNum++; // create unique labels for these BBs
+
+  BasicBlock *PostfixBB = BasicBlock::Create(
+      TheContext, "postfix" + std::to_string(labelNum), TheFunction);
+
+  // create a branch to the postfix block
+  Builder.CreateBr(PostfixBB);
+
+  // Emit postfix block.
+  {
+    Builder.SetInsertPoint(PostfixBB);
+    Value *val = Builder.CreateLoad(Type::getInt64Ty(TheContext), argVal);
+
+    if (getOp() == "++") {
+      rValue = Builder.CreateAdd(val, oneV, "inctmp");
+    } else if (getOp() == "--") {
+      rValue = Builder.CreateSub(val, oneV, "dectmp");
+    } else {
+      throw InternalError("unknown postfix operator: " + getOp());
+    }
+  }
+
+  return Builder.CreateStore(rValue, argVal);
+} // LCOV_EXCL_LINE
+
+// llvm::Value *ASTForStmt::codegen() {
+//   LOG_S(1) << "Generating code for " << *this;
+
+/*
+  * We have two versions of the for loop. The first is the range-based for
+  * loop "for (E1 : E2 .. E3 by E4) S". The second is the iterator-based for
+  * loop "for (E1 : E2) S".
+  *
+  * The range-based for loop is translated into the following code:
+  *   E1 = E2
+  *   while (E1 <= E3) {
+  *     S
+  *     E1 = E1 + E4
+  *   }
+  *
+//}
+  * The iterator-based for loop is translated into the following code:
+  *   E1 = E2.begin()
+  *   while (E1 != E2.end()) {
+  *     S
+  *     E1 = E1.next()
+  *   }
+*/
+
+llvm::Value *ASTArrayConstructorExpr::codegen() {
+  LOG_S(1) << "Generating code for " << *this;
+
+  // * Because all types are represented as 64-bit integers, we can
+  // * use the same code for all types.
+
+  // * create an array of the appropriate size
+  Value *size = nullptr;
+
+  Value *ArrayPtr = nullptr;
+
+  /*
+   * Array creation is done by allocating a block of memory on the stack
+   * and then generating the code for each element of the array and storing
+   * it in the appropriate location in the array.
+   *
+   * The first index of the array is the size of the array. This will effect
+   * the element indexing in the array (size is the memory location of the
+   * array). Therefore use of getelementptr is must be modified to account
+   * for the difference in the size of the memory block and the size of the
+   * array.
+   */
+
+  // * Blocks for the array constructor, branch to the respective block
+  // * based on the isImplicit flag.
+
+  llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  labelNum++; // create unique labels for these BBs
+
+  BasicBlock *StartArrayCreationBB = BasicBlock::Create(
+      TheContext, "startarray" + std::to_string(labelNum), TheFunction);
+
+  BasicBlock *ExplicitArrayBB = BasicBlock::Create(
+      TheContext, "explicitarray" + std::to_string(labelNum));
+
+  BasicBlock *ImplicitArrayBB = BasicBlock::Create(
+      TheContext, "implicitarray" + std::to_string(labelNum));
+
+  BasicBlock *EndArrayCreationBB =
+      BasicBlock::Create(TheContext, "endarray" + std::to_string(labelNum));
+
+  Builder.CreateBr(StartArrayCreationBB);
+
+  // * Emit the start array creation block.
+  {
+    Builder.SetInsertPoint(StartArrayCreationBB);
+
+    // * Branch to the appropriate block based on the isImplicit flag.
+
+    if (isImplicit()) {
+      Builder.CreateBr(ImplicitArrayBB);
+    } else if (!isImplicit()) {
+      Builder.CreateBr(ExplicitArrayBB);
+    } else {
+      throw InternalError("unknown array constructor type");
+    }
+  }
+
+  // * Emit the explicit array creation block.
+  {
+    TheFunction->getBasicBlockList().push_back(ExplicitArrayBB);
+    Builder.SetInsertPoint(ExplicitArrayBB);
+
+    // * Create the array on the stack. (size + 1) because size is the first
+    // * index of the array.
+    size = ConstantInt::get(Type::getInt64Ty(TheContext),
+                            (getElements().size() + 1));
+    ArrayPtr = Builder.CreateAlloca(Type::getInt64Ty(TheContext), size);
+
+    // * Store the size of the array in the first index of the array.
+    Builder.CreateStore(size, ArrayPtr);
+
+    // * Generate the code for each element of the array and store it in the
+    // * appropriate location in the array. Upper bound is size + 1 because
+    // * size is the first index of the array.
+    for (unsigned i = 0; i < getElements().size(); i++) {
+      Value *element = getElements()[i]->codegen();
+      if (element == nullptr) {
+        throw InternalError("failed to generate bitcode for the element of "
+                            "the array constructor expression");
+      }
+
+      // * Get the pointer to the appropriate location in the array.
+      Value *index = ConstantInt::get(Type::getInt64Ty(TheContext), (i + 1));
+      Value *elementPtr = Builder.CreateGEP(Type::getInt64Ty(TheContext),
+                                            ArrayPtr, index, "elementptr");
+
+      // * Store the element in the appropriate location in the array.
+      Builder.CreateStore(element, elementPtr);
+    }
+
+    // * Branch to the end array creation block.
+    Builder.CreateBr(EndArrayCreationBB);
+  }
+
+  // * Emit the implicit array creation block.
+  {
+    TheFunction->getBasicBlockList().push_back(ImplicitArrayBB);
+    Builder.SetInsertPoint(ImplicitArrayBB);
+
+    // * Create the array on the stack. (size + 1) because size is the first
+    // * index of the array.
+    int numElements;
+
+    if (ASTNumberExpr *n = dynamic_cast<ASTNumberExpr *>(getElements().at(0))) {
+      numElements = n->getValue();
+    } else {
+      throw InternalError("unknown array constructor type");
+    }
+
+    size = ConstantInt::get(Type::getInt64Ty(TheContext), (numElements + 1));
+
+    ArrayPtr = Builder.CreateAlloca(Type::getInt64Ty(TheContext), size);
+
+    // * Store the size of the array in the first index of the array.
+    Value *SizePtr = Builder.CreateGEP(Type::getInt64Ty(TheContext), ArrayPtr,
+                                       zeroV, "sizeptr");
+    Builder.CreateStore(size, SizePtr);
+
+    // * Generate the code for the element (E2)
+    Value *element = getElements()[1]->codegen();
+    if (element == nullptr) {
+      throw InternalError("failed to generate bitcode for the element of "
+                          "the array constructor expression");
+    }
+
+    // * Populate the array with E1 of the element (E2)
+    for (unsigned i = 0; i < numElements; i++) {
+      // * Get the pointer to the appropriate location in the array.
+      Value *index = ConstantInt::get(Type::getInt64Ty(TheContext), (i + 1));
+      Value *elementPtr = Builder.CreateGEP(Type::getInt64Ty(TheContext),
+                                            ArrayPtr, index, "elementptr");
+
+      // * Store the element in the appropriate location in the array.
+      Builder.CreateStore(element, elementPtr);
+    }
+
+    // * Branch to the end array creation block.
+    Builder.CreateBr(EndArrayCreationBB);
+  }
+
+  // * Emit the end array creation block.
+  {
+    TheFunction->getBasicBlockList().push_back(EndArrayCreationBB);
+    Builder.SetInsertPoint(EndArrayCreationBB);
+
+    // * Return the array.
+    return Builder.CreateLoad(Type::getInt64PtrTy(TheContext), ArrayPtr);
+  }
+}
+
+// llvm::Value *ASTArrayLengthExpr::codegen() {
+//   LOG_S(1) << "Generating code for " << *this;
+
+//   // * Get the array.
+//   Value *array = getArray()->codegen();
+//   if (array == nullptr) {
+//     throw InternalError("failed to generate bitcode for the array of the "
+//                         "array length expression");
+//   }
+
+//   // * Get the pointer to the size of the array.
+//   Value *sizePtr =
+//       Builder.CreateGEP(Type::getInt64Ty(TheContext), array, 0, "sizeptr");
+
+//   // * Load the size of the array and return it.
+//   return Builder.CreateLoad(Type::getInt64Ty(TheContext), sizePtr);
+// }
+
+llvm::Value *ASTArraySubscriptExpr::codegen() {
+  LOG_S(1) << "Generating code for " << *this;
+
+  // * Get the array.
+  Value *array = getArray()->codegen();
+  if (array == nullptr) {
+    throw InternalError("failed to generate bitcode for the array of the "
+                        "array subscript expression");
+  }
+  // get the pointer to the array
+  Value *arrayPtr = Builder.CreateLoad(Type::getInt64PtrTy(TheContext), array);
+  // * Get the index.
+  Value *index = getIndex()->codegen();
+  if (index == nullptr) {
+    throw InternalError("failed to generate bitcode for the index of the "
+                        "array subscript expression");
+  }
+  index = Builder.CreateAdd(index, oneV, "index");
+
+  // * Get the pointer to the element of the array.
+  Value *elementPtr = Builder.CreateGEP(Type::getInt64Ty(TheContext), arrayPtr,
+                                        index, "elementptr");
+
+  // * Load the element of the array and return it.
+  Value *refV = Builder.CreateLoad(Type::getInt64Ty(TheContext), elementPtr);
+
+  return refV;
+}
