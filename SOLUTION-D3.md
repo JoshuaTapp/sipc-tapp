@@ -3,6 +3,7 @@
 ## Weeding Pass
 
 The only new feature from SIP that required an update to TIP's weeding pass was array referencing. My AST node for this feature, `ASTArraySubscriptExpr` holds two node pointers (array, index). To update my `CheckAssignable.cpp` was to add a new method for array referencing. Because all arrays are simply pointers to a memory block (in some way), they will be assigned to some `ASTVariableExpr`. Because of this, I could reuse the `isAssignable` anonymous function without update. I followed the same model as the `CheckAssignable::endVisit(ASTRefExpr *element)` method; as they are effectively doing the same thing. The only difference being the type of `ASTExpr` field. Funny enough, the only issue I had was with testing. It took me a few minutes to remember that even an uninitialized variable is still valid in the weeding pass. Once I realized this oversight, I updated the test for failure from,
+
 ```cpp
 // Original
 TEST_CASE("Check Assignable: address of array", "[Symbol]") {
@@ -22,8 +23,8 @@ TEST_CASE("Check Assignable: address of array", "[Symbol]") {
                          ContainsWhat("1 not an l-value"));
 }
 ```
-With that fix, I was somewhat ensured that my solution was correct.
 
+With that fix, I was somewhat ensured that my solution was correct.
 
 ## Types
 
