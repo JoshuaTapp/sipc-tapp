@@ -38,7 +38,7 @@ endif()
 ######## ANTLR4 CPP target rules ###########
 
 cmake_policy(PUSH)
-# Allow the antlr jar to be found without execute permissions. 
+# Allow the antlr jar to be found without execute permissions.
 cmake_policy(SET CMP0109 OLD)
 cmake_policy(SET CMP0114 NEW)
 
@@ -79,7 +79,7 @@ cmake_policy(POP)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   find_package(LLVM 14.0.0 REQUIRED CONFIG)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-  find_package(LLVM 14.0.0 REQUIRED CONFIG)
+  find_package(LLVM 14.0.6 REQUIRED CONFIG)
 else()
   message(FATAL_ERROR "${CMAKE_SYSTEM_NAME} is not supported")
 endif()

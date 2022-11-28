@@ -473,9 +473,26 @@ llvm::Value *ASTNumberExpr::codegen() {
   return ConstantInt::get(Type::getInt64Ty(TheContext), getValue());
 } // LCOV_EXCL_LINE
 
+/*
+ * Binary Expr (LHS op RHS):
+ *
+ * NOTE: Because of addition of boolean type, we require special handling in the
+ * codegen for ASTBinaryExpr and ASTUnaryExpr.
+ *
+ *    - Logical Operators (and, or, not):
+ *        Because we store boolean literals as integers, we must modify the
+ *        codegen for them so they return logical values not bitwise values.
+ *
+ *    - Equality and Relational Operators (<, <=, >, >=, ==, !=):
+ *        Because we store boolean literals as integers, we must modify the
+ *        codegen for them so they return i64 values not i1 values.
+ */
+
 llvm::Value *ASTBinaryExpr::codegen() {
   LOG_S(1) << "Generating code for " << *this;
 
+  bool returnBoolFlag = false;
+  Value *resultV = nullptr;
   Value *L = getLeft()->codegen();
   Value *R = getRight()->codegen();
   if (L == nullptr || R == nullptr) {
@@ -483,34 +500,66 @@ llvm::Value *ASTBinaryExpr::codegen() {
   }
 
   if (getOp() == "+") {
-    return Builder.CreateAdd(L, R, "addtmp");
+    resultV = Builder.CreateAdd(L, R, "addtmp");
+    returnBoolFlag = false;
   } else if (getOp() == "-") {
-    return Builder.CreateSub(L, R, "subtmp");
+    resultV = Builder.CreateSub(L, R, "subtmp");
+    returnBoolFlag = false;
   } else if (getOp() == "*") {
-    return Builder.CreateMul(L, R, "multmp");
+    resultV = Builder.CreateMul(L, R, "multmp");
+    returnBoolFlag = false;
   } else if (getOp() == "/") {
-    return Builder.CreateSDiv(L, R, "divtmp");
+    resultV = Builder.CreateSDiv(L, R, "divtmp");
+    returnBoolFlag = false;
   } else if (getOp() == "%") {
-    return Builder.CreateSRem(L, R, "remtmp");
-  } else if (getOp() == ">") {
-    return Builder.CreateICmpSGT(L, R, "gttmp");
-  } else if (getOp() == "==") {
-    return Builder.CreateICmpEQ(L, R, "eqtmp");
-  } else if (getOp() == "!=") {
-    return Builder.CreateICmpNE(L, R, "netmp");
+    resultV = Builder.CreateSRem(L, R, "remtmp");
+    returnBoolFlag = false;
   } else if (getOp() == "<") {
-    return Builder.CreateICmpSLT(L, R, "lttmp");
-  } else if (getOp() == ">=") {
-    return Builder.CreateICmpSGE(L, R, "getmp");
+    resultV = Builder.CreateICmpSLT(L, R, "lttmp");
+    returnBoolFlag = true;
+  } else if (getOp() == ">") {
+    resultV = Builder.CreateICmpSGT(L, R, "gttmp");
+    returnBoolFlag = true;
   } else if (getOp() == "<=") {
-    return Builder.CreateICmpSLE(L, R, "letmp");
+    resultV = Builder.CreateICmpSLE(L, R, "letmp");
+    returnBoolFlag = true;
+  } else if (getOp() == ">=") {
+    resultV = Builder.CreateICmpSGE(L, R, "getmp");
+    returnBoolFlag = true;
+  } else if (getOp() == "==") {
+    resultV = Builder.CreateICmpEQ(L, R, "eqtmp");
+    returnBoolFlag = true;
+  } else if (getOp() == "!=") {
+    resultV = Builder.CreateICmpNE(L, R, "netmp");
+    returnBoolFlag = true;
   } else if (getOp() == "and") {
-    return Builder.CreateAnd(L, R, "andtmp");
+    /*  We take the i64 bool representation and do bitwise and
+        We then cast the result back to i64 by using the fact that
+        is i64 1 & i64 1 = i64 1, otherwise i64 0.                */
+    returnBoolFlag = true;
+    resultV = Builder.CreateAdd(L, R);
+
+    //  This will eval to int1Ty, just like the icmps.
+    resultV = Builder.CreateICmpEQ(
+        resultV, ConstantInt::get(resultV->getType(), 2), "andtmp");
+
   } else if (getOp() == "or") {
-    return Builder.CreateOr(L, R, "ortmp");
+    returnBoolFlag = true;
+    //  Repeat the above for "or"
+    resultV = Builder.CreateOr(L, R, "ortmp");
+    resultV = Builder.CreateICmpEQ(
+        resultV, ConstantInt::get(resultV->getType(), 0), "ortmp");
+
   } else {
-    throw InternalError("Invalid binary operator: " + OP);
+    throw InternalError("unknown binary operator");
   }
+
+  // convert the result to i64 if it is a boolean
+  if (returnBoolFlag) {
+  }
+
+  // otherwise, it is an integer, so we don't need to do anything
+  return resultV;
 }
 
 /*
@@ -657,11 +706,11 @@ llvm::Value *ASTNullExpr::codegen() {
                                 "nullPtrIntVal");
 }
 
-/* '&' address of expression
+/*
+ * '&' address of expression
  *
  * The argument must be capable of generating an l-value.
  * This is checked in the weeding pass.
- *
  */
 llvm::Value *ASTRefExpr::codegen() {
   LOG_S(1) << "Generating code for " << *this;
@@ -678,7 +727,8 @@ llvm::Value *ASTRefExpr::codegen() {
                                 "addrOfPtr");
 } // LCOV_EXCL_LINE
 
-/* '*' dereference expression
+/*
+ * '*' dereference expression
  *
  * The argument is assumed to be a reference expression, but
  * our code generation strategy stores everything as an integer.
@@ -1113,11 +1163,67 @@ llvm::Value *ASTReturnStmt::codegen() {
   return Builder.CreateRet(argVal);
 } // LCOV_EXCL_LINE
 
+/*
+ * *****************************************************************************
+ * ********************* BEGIN EXTENSION FOR DELIVERABLE 4 *********************
+ * *****************************************************************************
+ */
+
+/*
+ * Boolean Literal
+ *
+ * To remove need to modify codegen for ASTNode's with conditionals, we declare
+ * that 'true' == 0 and 'false' == 1. This allows us to use the same codegen
+ * for ASTIfStmt and ASTWhileStmt without modification.
+ */
 llvm::Value *ASTBooleanExpr::codegen() {
   LOG_S(1) << "Generating code for " << *this;
 
-  return ConstantInt::get(Type::getInt64Ty(TheContext), getValue());
+  return (getValue()) ? zeroV : oneV;
 } // LCOV_EXCL_LINE
+
+/*
+ * Unary Operator (not, neg)
+ *
+ * Similar to the binary operator, we need to check the type of the operand
+ * and then perform the appropriate operation.
+ *     not: 0 -> 1, 1 -> 0
+ *     neg: -x -> 0 - x
+ */
+
+llvm::Value *ASTUnaryExpr::codegen() {
+  LOG_S(1) << "Generating code for " << *this;
+
+  if (getOp() != "not" && getOp() != "-") {
+    throw InternalError("Invalid unary operator: " + getOp());
+  }
+
+  Value *ResultV = nullptr;
+  Value *Operand = getExpr()->codegen();
+
+  if (Operand == nullptr) {
+    throw InternalError("failed to generate bitcode for the operand of "
+                        "the unary expression");
+  }
+
+  if (getOp() == "not") {
+    // not: 0 -> 1, 1 -> 0 :: b XOR 1 -> !b
+    ResultV = Builder.CreateXor(Operand, oneV, "logicalnot");
+
+  } else {
+    // neg: -x -> 0 - x
+    ResultV = Builder.CreateSub(zeroV, Operand, "negate");
+  }
+  return ResultV;
+} // LCOV_EXCL_LINE
+/*
+ * Ternary Expr (E1) ? (E2) : (E3)
+ *
+ * E1 is the condition, E2 is the then expression, and E3 is the else
+ * expression.
+
+ ? There might be something I am missing here
+ */
 
 llvm::Value *ASTTernaryExpr::codegen() {
   LOG_S(1) << "Generating code for " << *this;
@@ -1129,8 +1235,7 @@ llvm::Value *ASTTernaryExpr::codegen() {
   }
 
   // Convert condition to a bool by comparing non-equal to 0.
-  CondV = Builder.CreateICmpNE(CondV, ConstantInt::get(CondV->getType(), 0),
-                               "terncond");
+  CondV = Builder.CreateICmpNE(CondV, zeroV, "terncond");
 
   // select the appropriate value based on the condition
   Value *trueV = getTrueExpr()->codegen();
@@ -1145,6 +1250,7 @@ llvm::Value *ASTTernaryExpr::codegen() {
         "the ternary expression");
   }
 
+  // Based on condition, return the appropriate value
   return Builder.CreateSelect(CondV, trueV, falseV);
 } // LCOV_EXCL_LINE
 
@@ -1169,8 +1275,8 @@ llvm::Value *ASTPostfixStmt::codegen() {
   Value *rValue = nullptr;
 
   if (argVal == nullptr) {
-    throw InternalError(
-        "failed to generate bitcode for the argument of the postfix statement");
+    throw InternalError("failed to generate bitcode for the argument of the "
+                        "postfix statement");
   }
 
   llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
@@ -1245,6 +1351,10 @@ llvm::Value *ASTArrayConstructorExpr::codegen() {
    * for the difference in the size of the memory block and the size of the
    * array.
    */
+
+  // TODO: Double check if Alloca is used correctly here
+  // TODO: Double check if the size of the array is correct
+  // TODO: ? am I returning the correct value here ?
 
   // * Blocks for the array constructor, branch to the respective block
   // * based on the isImplicit flag.
@@ -1395,28 +1505,112 @@ llvm::Value *ASTArrayConstructorExpr::codegen() {
 llvm::Value *ASTArraySubscriptExpr::codegen() {
   LOG_S(1) << "Generating code for " << *this;
 
-  // * Get the array.
+  llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  Value *retV = nullptr;
+
+  // * Basic Block for inbound index check.
+  BasicBlock *CheckIndexBB = BasicBlock::Create(
+      TheContext, "checkindex" + std::to_string(labelNum), TheFunction);
+
+  // * Basic Block inbound index check failed.
+  BasicBlock *IndexOutOfBoundsBB = BasicBlock::Create(
+      TheContext, "indexoutofbounds" + std::to_string(labelNum));
+
+  // * Basic Block for inbound index check passed.
+  BasicBlock *IndexInBoundsBB = BasicBlock::Create(
+      TheContext, "indexinbounds" + std::to_string(labelNum));
+
+  // * Basic Block for end of array subscript expression.
+  BasicBlock *EndArraySubscriptBB = BasicBlock::Create(
+      TheContext, "endarraysubscript" + std::to_string(labelNum));
+
+  // * Get the array. (l-value of the array)
+  lValueGen = true;
   Value *array = getArray()->codegen();
+  lValueGen = false;
   if (array == nullptr) {
     throw InternalError("failed to generate bitcode for the array of the "
                         "array subscript expression");
   }
-  // get the pointer to the array
-  Value *arrayPtr = Builder.CreateLoad(Type::getInt64PtrTy(TheContext), array);
+
   // * Get the index.
+  lValueGen = true;
   Value *index = getIndex()->codegen();
+  lValueGen = false;
   if (index == nullptr) {
     throw InternalError("failed to generate bitcode for the index of the "
                         "array subscript expression");
   }
-  index = Builder.CreateAdd(index, oneV, "index");
 
-  // * Get the pointer to the element of the array.
-  Value *elementPtr = Builder.CreateGEP(Type::getInt64Ty(TheContext), arrayPtr,
-                                        index, "elementptr");
+  // * go to the check index block.
+  Builder.CreateBr(CheckIndexBB);
 
-  // * Load the element of the array and return it.
-  Value *refV = Builder.CreateLoad(Type::getInt64Ty(TheContext), elementPtr);
+  // * Emit the check index block.
+  {
+    Builder.SetInsertPoint(CheckIndexBB);
 
-  return refV;
+    // * Get pointer to Array
+    Value *arrayPtr =
+        Builder.CreateIntToPtr(array, Type::getInt64PtrTy(TheContext));
+
+    // * Get the size of the array.
+    Value *sizePtr =
+        Builder.CreateGEP(Type::getInt64Ty(TheContext), arrayPtr, zeroV);
+
+    Value *size = Builder.CreateLoad(
+        sizePtr->getType()->getPointerElementType(), sizePtr);
+    Value *indexV =
+        Builder.CreateLoad(index->getType()->getPointerElementType(), index);
+
+    // * Check if the index is in bounds. (index < size)
+    Value *inBounds = Builder.CreateICmpULT(indexV, size, "inbounds");
+
+    // * Branch to the appropriate block. (inbound or out of bound)
+    Builder.CreateCondBr(inBounds, IndexInBoundsBB, IndexOutOfBoundsBB);
+  }
+
+  // * Emit the index out of bounds block.
+  {
+    TheFunction->getBasicBlockList().push_back(IndexOutOfBoundsBB);
+    Builder.SetInsertPoint(IndexOutOfBoundsBB);
+
+    // TODO: error handling
+    retV = zeroV;
+    // * Branch to the end array subscript block.
+    Builder.CreateBr(EndArraySubscriptBB);
+  }
+
+  // * Emit the index in bounds block.
+  {
+    TheFunction->getBasicBlockList().push_back(IndexInBoundsBB);
+    Builder.SetInsertPoint(IndexInBoundsBB);
+
+    // * Get the array base pointer.
+    Value *arrayPtr =
+        Builder.CreateIntToPtr(array, Type::getInt64PtrTy(TheContext));
+    Value *arrayBasePtr =
+        Builder.CreateGEP(arrayPtr->getType()->getPointerElementType(),
+                          arrayPtr, oneV, "arraybaseptr");
+
+    // * Get the pointer to the element.
+    Value *elementPtr =
+        Builder.CreateGEP(arrayBasePtr->getType()->getPointerElementType(),
+                          arrayBasePtr, index, "elementptr");
+
+    // * Load the element and return it.
+    retV = Builder.CreateLoad(elementPtr->getType()->getPointerElementType(),
+                              elementPtr);
+
+    // * Branch to the end array subscript block.
+    Builder.CreateBr(EndArraySubscriptBB);
+  }
+
+  // * Emit the end array subscript block.
+  {
+    TheFunction->getBasicBlockList().push_back(EndArraySubscriptBB);
+    Builder.SetInsertPoint(EndArraySubscriptBB);
+
+    // * Return the element.
+    return retV;
+  }
 }
