@@ -556,6 +556,8 @@ llvm::Value *ASTBinaryExpr::codegen() {
 
   // convert the result to i64 if it is a boolean
   if (returnBoolFlag) {
+    resultV = Builder.CreateSelect(resultV, oneV, zeroV, "boolcast");
+    returnBoolFlag = false;
   }
 
   // otherwise, it is an integer, so we don't need to do anything
@@ -1049,7 +1051,7 @@ llvm::Value *ASTIfStmt::codegen() {
   }
 
   // Convert condition to a bool by comparing non-equal to 0.
-  CondV = Builder.CreateICmpNE(CondV, ConstantInt::get(CondV->getType(), 1),
+  CondV = Builder.CreateICmpNE(CondV, ConstantInt::get(CondV->getType(), 0),
                                "ifcond");
 
   llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
@@ -1285,6 +1287,9 @@ llvm::Value *ASTPostfixStmt::codegen() {
   BasicBlock *PostfixBB = BasicBlock::Create(
       TheContext, "postfix" + std::to_string(labelNum), TheFunction);
 
+  BasicBlock *PostfixEndBB =
+      BasicBlock::Create(TheContext, "postfixend" + std::to_string(labelNum));
+
   // create a branch to the postfix block
   Builder.CreateBr(PostfixBB);
 
@@ -1300,9 +1305,16 @@ llvm::Value *ASTPostfixStmt::codegen() {
     } else {
       throw InternalError("unknown postfix operator: " + getOp());
     }
+
+    Builder.CreateBr(PostfixEndBB);
   }
 
-  return Builder.CreateStore(rValue, argVal);
+  // Emit postfix end block.
+  {
+    TheFunction->getBasicBlockList().push_back(PostfixEndBB);
+    Builder.SetInsertPoint(PostfixEndBB);
+    return Builder.CreateStore(rValue, argVal);
+  }
 } // LCOV_EXCL_LINE
 
 // llvm::Value *ASTForStmt::codegen() {
