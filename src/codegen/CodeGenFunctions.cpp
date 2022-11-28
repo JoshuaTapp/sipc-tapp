@@ -537,26 +537,26 @@ llvm::Value *ASTBinaryExpr::codegen() {
         We then cast the result back to i64 by using the fact that
         is i64 1 & i64 1 = i64 1, otherwise i64 0.                */
     returnBoolFlag = true;
-    resultV = Builder.CreateAdd(L, R);
-
-    //  This will eval to int1Ty, just like the icmps.
-    resultV = Builder.CreateICmpEQ(
-        resultV, ConstantInt::get(resultV->getType(), 2), "andtmp");
+    //  convert i64 bools to i1 bools (i64 0 = i1 1)
+    Value *LBoolV = Builder.CreateICmpEQ(L, zeroV);
+    Value *RBoolV = Builder.CreateICmpEQ(R, zeroV);
+    //  do bitwise and with i1 bools
+    resultV = Builder.CreateAnd(LBoolV, RBoolV, "andtmp");
 
   } else if (getOp() == "or") {
     returnBoolFlag = true;
-    //  Repeat the above for "or"
-    resultV = Builder.CreateOr(L, R, "ortmp");
-    resultV = Builder.CreateICmpEQ(
-        resultV, ConstantInt::get(resultV->getType(), 0), "ortmp");
-
+    //  convert i64 bools to i1 bools (i64 0 = i1 1)
+    Value *LBoolV = Builder.CreateICmpEQ(L, zeroV);
+    Value *RBoolV = Builder.CreateICmpEQ(R, zeroV);
+    //  do the or operation with the i1 bools
+    resultV = Builder.CreateOr(LBoolV, RBoolV, "ortmp");
   } else {
     throw InternalError("unknown binary operator");
   }
 
   // convert the result to i64 if it is a boolean
   if (returnBoolFlag) {
-    resultV = Builder.CreateSelect(resultV, oneV, zeroV, "boolcast");
+    resultV = Builder.CreateSelect(resultV, zeroV, oneV, "boolcast");
     returnBoolFlag = false;
   }
 
@@ -1051,7 +1051,7 @@ llvm::Value *ASTIfStmt::codegen() {
   }
 
   // Convert condition to a bool by comparing non-equal to 0.
-  CondV = Builder.CreateICmpNE(CondV, ConstantInt::get(CondV->getType(), 0),
+  CondV = Builder.CreateICmpEQ(CondV, ConstantInt::get(CondV->getType(), 0),
                                "ifcond");
 
   llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
