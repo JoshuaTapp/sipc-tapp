@@ -1049,7 +1049,7 @@ llvm::Value *ASTIfStmt::codegen() {
   }
 
   // Convert condition to a bool by comparing non-equal to 0.
-  CondV = Builder.CreateICmpNE(CondV, ConstantInt::get(CondV->getType(), 0),
+  CondV = Builder.CreateICmpNE(CondV, ConstantInt::get(CondV->getType(), 1),
                                "ifcond");
 
   llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();

@@ -37,13 +37,13 @@ do
   ./${base} &>/dev/null
   exit_code=${?}
   if [ ${exit_code} -ne 0 ]; then
-    echo -n "Test failure for : " 
+    echo -n "Test failure for : "
     echo $i
     ./${base}
     ((numfailures++))
-  else 
+  else
     rm ${base}
-  fi 
+  fi
   rm $i.bc
 
   # test unoptimized program
@@ -54,13 +54,13 @@ do
   ./${base} &>/dev/null
   exit_code=${?}
   if [ ${exit_code} -ne 0 ]; then
-    echo -n "Test failure for : " 
+    echo -n "Test failure for : "
     echo $i
     ./${base}
     ((numfailures++))
-  else 
+  else
     rm ${base}
-  fi 
+  fi
   rm $i.bc
 done
 
@@ -82,11 +82,11 @@ do
 
   if [[ -s ${SCRATCH_DIR}/$executable.diff ]]
   then
-    echo -n "Test differences for : " 
+    echo -n "Test differences for : "
     echo $i
     cat ${SCRATCH_DIR}/$executable.diff
     ((numfailures++))
-  fi 
+  fi
 
   rm iotests/$executable.tip.bc
   rm iotests/$executable.output
@@ -101,12 +101,12 @@ do
   ${TIPC} $i &>/dev/null
   exit_code=${?}
   if [ ${exit_code} -eq 0 ]; then
-    echo -n "Test failure for : " 
+    echo -n "Test failure for : "
     echo -n $i
     echo " expected error"
     ((numfailures++))
     rm iotests/*error.tip.bc
-  fi 
+  fi
 done
 
 # Tests to cover argument handling
@@ -119,7 +119,7 @@ then
   echo "Test differences for : iotests/fib.tip"
   cat ${SCRATCH_DIR}/fib.diff
   ((numfailures++))
-fi 
+fi
 
 # Test default output file.
 initialize_test
@@ -127,9 +127,9 @@ input=iotests/main.tip
 expected=iotests/main.tip.ll
 ${TIPC} --asm $input
 if [ ! -f $expected ]; then
-  echo -n "Did not find expected output, $expected, for input $input" 
+  echo -n "Did not find expected output, $expected, for input $input"
   ((numfailures++))
-fi 
+fi
 rm $expected
 
 # Test human-readable assembly.
@@ -141,10 +141,10 @@ diffed=${SCRATCH_DIR}/fib.diff
 ${TIPC} --asm $input -o $output
 diff <(sed -n '4,$p' $output) <(sed -n '4,$p' $expected) > $diffed
 if [ -s $diffed ]; then
-  echo -n "Test differences for: $input" 
+  echo -n "Test differences for: $input"
   cat $diffed
   ((numfailures++))
-fi 
+fi
 
 # Test call graph.
 initialize_test
@@ -156,10 +156,10 @@ diffed_graph=${SCRATCH_DIR}/fib.tip.dot.diff
 ${TIPC} --pcg=$output_graph $input -o $output
 diff $output_graph $expected_graph > $diffed_graph
 if [ -s $diffed_graph ]; then
-  echo "Test differences for: $input" 
+  echo "Test differences for: $input"
   cat $diffed_graph
   ((numfailures++))
-fi 
+fi
 
 
 
@@ -173,7 +173,7 @@ done
 ${TIPC} $nonexistent &>/dev/null
 exit_code=${?}
 if [ ${exit_code} -eq 0 ]; then
-  echo -n "Test failure for non-exisitent input" 
+  echo -n "Test failure for non-exisitent input"
   ((numfailures++))
 fi
 
@@ -187,11 +187,11 @@ do
   diff $i.pppt ${SCRATCH_DIR}/$base.pppt >${SCRATCH_DIR}/$base.diff
   if [[ -s ${SCRATCH_DIR}/$base.diff ]]
   then
-    echo -n "Test differences for : " 
+    echo -n "Test differences for : "
     echo $i
     cat ${SCRATCH_DIR}/$base.diff
     ((numfailures++))
-  fi 
+  fi
 done
 
 # Test unwritable output file for both ast and call graph printing
@@ -206,7 +206,7 @@ if [[ ! -s ${SCRATCH_DIR}/unwritable.grep ]]; then
   echo $i
   cat ${SCRATCH_DIR}/$outputfile.grep
   ((numfailures++))
-fi 
+fi
 
 initialize_test
 outputfile=iotests/unwritable
@@ -219,12 +219,12 @@ if [[ ! -s ${SCRATCH_DIR}/unwritable.grep ]]; then
   echo $i
   cat ${SCRATCH_DIR}/$outputfile.grep
   ((numfailures++))
-fi 
+fi
 
-# Logging test 
+# Logging test
 #   enable logging for a basic smoke test
 initialize_test
-${TIPC} -pt -log=/dev/null selftests/polyfactorial.tip &>/dev/null 
+${TIPC} -pt -log=/dev/null selftests/polyfactorial.tip &>/dev/null
 
 # Test AST visualizer
 initialize_test
@@ -245,21 +245,21 @@ input=selftests/ptr4.tip
 output_graph=${SCRATCH_DIR}/ptr4.tip.dot
 expected_output=selftests/ptr4.tip.dot
 diffed_graph=${SCRATCH_DIR}/ptr4.tip.dot.diff
-${TIPC} --pa=$output_graph $input 
+${TIPC} --pa=$output_graph $input
 diff $output_graph $expected_output > $diffed_graph
 if [ -s $diffed_graph ]; then
-  echo "Test differences for: $input" 
+  echo "Test differences for: $input"
   cat $differences
   ((numfailures++))
-fi 
+fi
 
 # Print out the test results
 if [ ${numfailures} -eq "0" ]; then
-  echo -n " all " 
+  echo -n " all "
   echo -n ${numtests}
   echo " tests passed"
 else
-  echo -n " " 
+  echo -n " "
   echo -n ${numfailures}/${numtests}
   echo " tests failed"
 fi

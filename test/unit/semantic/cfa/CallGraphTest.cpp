@@ -291,7 +291,7 @@ TEST_CASE("CallGraph: test SemanticAnalysis"
     )";
 
   auto ast = ASTHelper::build_ast(program);
-  auto analysisResults = SemanticAnalysis::analyze(ast.get(), false);
+  auto analysisResults = SemanticAnalysis::analyze(ast.get());
   auto callGraph = analysisResults.get()->getCallGraph();
   REQUIRE(callGraph->getVertices().size() == 3); // size should be 2
 }
@@ -312,7 +312,7 @@ TEST_CASE("CallGraph: test print method"
     )";
 
   auto ast = ASTHelper::build_ast(program);
-  auto analysisResults = SemanticAnalysis::analyze(ast.get(), false);
+  auto analysisResults = SemanticAnalysis::analyze(ast.get());
   auto callGraph = analysisResults.get()->getCallGraph();
 
   std::stringstream outputStream;

@@ -25,7 +25,7 @@ echoerr() {
 bootstrap_ubuntu_dependencies() {
   [ -d /usr/share/keyrings ] || sudo mkdir -p /usr/share/keyrings
 
-  wget https://apt.corretto.aws/corretto.key 
+  wget https://apt.corretto.aws/corretto.key
   gpg --dearmor corretto.key
   sudo mv corretto.key.gpg /usr/share/keyrings/amazon-corretto-${JAVA_VERSION}-keyring.gpg
   sudo cp ${ROOT_DIR}/bin/apt/amazon-corretto-${JAVA_VERSION}.sources /etc/apt/sources.list.d/
@@ -45,10 +45,10 @@ bootstrap_ubuntu_dependencies() {
     zlib1g-dev \
     lcov
 
-  if [ "$VERSION_ID" = "18.04" ]; then 
+  if [ "$VERSION_ID" = "18.04" ]; then
     sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
   fi
-  
+
   wget https://apt.llvm.org/llvm.sh
   sed -i -E 's,Ubuntu_(.*),&\n    Pop_\1,g' llvm.sh
   chmod +x llvm.sh
@@ -98,13 +98,8 @@ bootstrap_linux() {
 
 
 bootstrap_mac_env() {
-  if [[ -z "${LLVM_DIR}" ]]; then
-    echo export LLVM_DIR=$(brew --prefix llvm@$LLVM_VERSION)/lib/cmake >> ~/.bashrc
-  fi
-  
-  if [[ -z "${TIPCLANG}" ]]; then
-    echo export TIPCLANG=$(brew --prefix llvm@$LLVM_VERSION)/bin/clang >> ~/.bashrc
-  fi
+  echo export LLVM_DIR=$(brew --prefix llvm@$LLVM_VERSION)/lib/cmake >> ~/.bashrc
+  echo export TIPCLANG=$(brew --prefix llvm@$LLVM_VERSION)/bin/clang >> ~/.bashrc
 }
 
 
@@ -152,4 +147,3 @@ bootstrap() {
 }
 
 bootstrap
-
