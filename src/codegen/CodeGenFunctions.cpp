@@ -1000,7 +1000,7 @@ llvm::Value *ASTWhileStmt::codegen() {
     }
 
     // Convert condition to a bool by comparing non-equal to 0.
-    CondV = Builder.CreateICmpNE(CondV, ConstantInt::get(CondV->getType(), 0),
+    CondV = Builder.CreateICmpEQ(CondV, ConstantInt::get(CondV->getType(), 0),
                                  "loopcond");
 
     Builder.CreateCondBr(CondV, BodyBB, ExitBB);
@@ -1546,9 +1546,7 @@ llvm::Value *ASTArraySubscriptExpr::codegen() {
   }
 
   // * Get the index.
-  lValueGen = true;
   Value *index = getIndex()->codegen();
-  lValueGen = false;
   if (index == nullptr) {
     throw InternalError("failed to generate bitcode for the index of the "
                         "array subscript expression");
