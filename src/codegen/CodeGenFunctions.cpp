@@ -1237,7 +1237,7 @@ llvm::Value *ASTTernaryExpr::codegen() {
   }
 
   // Convert condition to a bool by comparing non-equal to 0.
-  CondV = Builder.CreateICmpNE(CondV, zeroV, "terncond");
+  CondV = Builder.CreateICmpEQ(CondV, zeroV, "terncond");
 
   // select the appropriate value based on the condition
   Value *trueV = getTrueExpr()->codegen();

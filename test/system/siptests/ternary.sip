@@ -1,6 +1,7 @@
 main() {
     var b, r;
-    b = false;
+    b = true;
     r = b ? 1 : 2;
-    return r;
+    if(r != 1) error r;
+    return 0;
 }
