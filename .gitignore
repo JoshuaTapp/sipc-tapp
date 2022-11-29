@@ -37,3 +37,10 @@ coverage.out/
 # macOS
 **/.DS_Store
 .DS_Store
+
+#vscode
+.vscode/
+.github/
+
+# .sip files in root directory only
+/*.sip
