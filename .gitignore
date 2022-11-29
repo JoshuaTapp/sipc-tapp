@@ -38,9 +38,8 @@ coverage.out/
 **/.DS_Store
 .DS_Store
 
-#vscode
+# vscode
 .vscode/
-.github/
 
 # .sip files in root directory only
 /*.sip
