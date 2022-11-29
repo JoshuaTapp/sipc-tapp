@@ -17,5 +17,3 @@ std::vector<std::shared_ptr<ASTNode>> ASTArrayLengthExpr::getChildren() {
   children.push_back(array);
   return children;
 }
-
-llvm::Value *ASTArrayLengthExpr::codegen() { return nullptr; }
