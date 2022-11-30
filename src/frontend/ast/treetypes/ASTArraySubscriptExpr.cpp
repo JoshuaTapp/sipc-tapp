@@ -19,5 +19,3 @@ std::vector<std::shared_ptr<ASTNode>> ASTArraySubscriptExpr::getChildren() {
   children.push_back(index);
   return children;
 }
-
-llvm::Value *ASTArraySubscriptExpr::codegen() { return nullptr; }

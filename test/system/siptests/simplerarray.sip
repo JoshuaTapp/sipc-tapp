@@ -1,5 +1,6 @@
 main() {
- var a;
- a = [1, 2];
- return #a;
+    var a;
+    a = [1, 2, 3];
+    if(#a != 3) error #a;
+    return a[1];
 }
