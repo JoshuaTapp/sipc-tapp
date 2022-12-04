@@ -100,6 +100,7 @@ bootstrap_linux() {
 bootstrap_mac_env() {
   echo export LLVM_DIR=$(brew --prefix llvm@$LLVM_VERSION)/lib/cmake >> ~/.bashrc
   echo export TIPCLANG=$(brew --prefix llvm@$LLVM_VERSION)/bin/clang >> ~/.bashrc
+  echo export LDFLAGS="-L$(brew --prefix)/opt/llvm@14/lib/c++ -Wl,-rpath,$(brew --prefix)/opt/llvm@14/lib/" >> ~/.bashrc
 }
 
 

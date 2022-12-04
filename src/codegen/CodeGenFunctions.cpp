@@ -1386,7 +1386,10 @@ llvm::Value *ASTArrayConstructorExpr::codegen() {
 
     if (isImplicit()) {
       // * get the size of the array
+      lValueGen = true;
       Value *numElems = getElements()[0]->codegen();
+      lValueGen = false;
+
       if (numElems == nullptr) {
         throw InternalError("failed to generate bitcode for the size of the "
                             "implicit array constructor");
@@ -1404,30 +1407,49 @@ llvm::Value *ASTArrayConstructorExpr::codegen() {
       // * store the number of elements in the array
       Builder.CreateStore(numElems, castPtr);
 
-      // * store the elements in the array
+      // * This is a workaround for filling the array, as I cant use the
+      // * size of the elements vector to determine the number of elements
+      // * in the array. This is because the first element of the elements
+      // * vector is the size of the array.
+      Value *countV = ConstantInt::get(Type::getInt64Ty(TheContext), 1);
+      BasicBlock *FillLoopBB =
+          BasicBlock::Create(TheContext, "fillloop" + std::to_string(labelNum));
+      BasicBlock *FillEndBB =
+          BasicBlock::Create(TheContext, "fillend" + std::to_string(labelNum));
 
-      // * generate the fill value
-      allocFlag = true;
+      // * generate the fillVall
+      // TODO: do i need lvaluegen here ?
       Value *fillVal = getElements()[1]->codegen();
-      allocFlag = false;
       if (fillVal == nullptr) {
-        throw InternalError(
-            "failed to generate bitcode for the fill value of the "
-            "implicit array constructor");
+        throw InternalError("failed to generate bitcode for the fill value of "
+                            "the implicit array constructor");
       }
+      {
+        TheFunction->getBasicBlockList().push_back(FillLoopBB);
+        Builder.SetInsertPoint(FillLoopBB);
 
-      // * fill the array with the fill value
-      for (int i = 0; i < getElements().size(); i++) {
         // * get the pointer to the element in the array
         Value *elemPtr = Builder.CreateGEP(
             castPtr->getType()->getPointerElementType(), castPtr,
-            ConstantInt::get(Type::getInt64Ty(TheContext), i + 1));
+            countV); // TODO: check if this is correct
 
         // * store the element in the array
         Builder.CreateStore(fillVal, elemPtr);
+
+        // * increment the counter
+        countV = Builder.CreateAdd(countV, oneV, "countV");
+
+        // * If countV <= numElems, branch to the FillLoop again
+        Value *condV = Builder.CreateICmpSLE(countV, numElems, "condV");
+        Builder.CreateCondBr(condV, FillLoopBB, FillEndBB);
       }
-      return Builder.CreatePtrToInt(castPtr, Type::getInt64Ty(TheContext),
-                                    "arrayPtr");
+      {
+        TheFunction->getBasicBlockList().push_back(FillEndBB);
+        Builder.SetInsertPoint(FillEndBB);
+        Builder.CreateCall(nop);
+        return Builder.CreatePtrToInt(castPtr, Type::getInt64Ty(TheContext),
+                                      "arrayPtr");
+      }
     } else {
       // get the number of elements in the array
       int numElements = getElements().size();
@@ -1522,6 +1544,12 @@ llvm::Value *ASTArrayLengthExpr::codegen() {
 llvm::Value *ASTArraySubscriptExpr::codegen() {
   LOG_S(1) << "Generating code for " << *this;
 
+  // BasicBlocks
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  BasicBlock *AccessIndexBB = BasicBlock::Create(TheContext, "accessIndexBB");
+  BasicBlock *ErrorBB = BasicBlock::Create(TheContext, "errorBB");
+  BasicBlock *EndBB = BasicBlock::Create(TheContext, "endBB");
+
   bool isLValue = lValueGen;
 
   if (isLValue) {
@@ -1550,63 +1578,69 @@ llvm::Value *ASTArraySubscriptExpr::codegen() {
   Value *arrayAddrInt64Ptr = Builder.CreateIntToPtr(
       ArrayPtr, Type::getInt64PtrTy(TheContext), "arrayAddrInt64Ptr");
 
-  // * Get the index.
+  // get the index
   lValueGen = true;
-  Value *index = getIndex()->codegen();
+  Value *idx = getIndex()->codegen();
   lValueGen = false;
-  if (index == nullptr) {
+
+  if (idx == nullptr) {
     throw InternalError("failed to generate bitcode for the index of the "
                         "array length expression");
   }
-  // if (!isLValue) {
-  //   index = Builder.CreateIntToPtr(index, Type::getInt64PtrTy(TheContext),
-  //                                  "indexPtr");
-  //   index = Builder.CreateLoad(Type::getInt64Ty(TheContext), index, "index");
-  // }
+  // Declare the error function
+  if (errorIntrinsic == nullptr) {
+    std::vector<Type *> oneInt(1, Type::getInt64Ty(TheContext));
+    auto *FT = FunctionType::get(Type::getInt64Ty(TheContext), oneInt, false);
+    errorIntrinsic = llvm::Function::Create(FT, llvm::Function::ExternalLinkage,
+                                            "_tip_error", CurrentModule.get());
+  }
 
-  // * get the size of the array for bounds checking
+  std::vector<Value *> ArgsV(1, idx);
+
+  // * test if the index is out of bounds using the array length from
+  // * arrayAddrInt64Ptr[0]
   Value *arrayLength = Builder.CreateLoad(Type::getInt64Ty(TheContext),
                                           arrayAddrInt64Ptr, "arrayLength");
+  // * Test idx < arrayLength
+  Value *idxLTLength = Builder.CreateICmpSLT(idx, arrayLength, "idxLTLength");
+  // * Test idx >= 0
+  Value *idxGEZero = Builder.CreateICmpSGE(idx, zeroV, "idxGEZero");
+  // * Test idx < arrayLength && idx >= 0
+  Value *idxInRange = Builder.CreateAnd(idxLTLength, idxGEZero, "idxInRange");
 
-  // Builder.CreateBr(arrayRefStartBB);
+  // * if idx is out of bounds, call the error function
+  Builder.CreateCondBr(idxInRange, AccessIndexBB, ErrorBB);
 
-  // // * Emit arrayRefStartBB
-  // {
-  //   Builder.SetInsertPoint(arrayRefStartBB);
+  // Emit the ErrorBB
+  {
+    TheFunction->getBasicBlockList().push_back(ErrorBB);
+    Builder.SetInsertPoint(ErrorBB);
+    Value *error = Builder.CreateCall(errorIntrinsic, ArgsV);
+    Builder.CreateRet(error);
+  }
 
-  //   // * check if the index is out of bounds (0 <= index < arrayLength)
-  //   Value *indexGEZero = Builder.CreateICmpSGE(index, zeroV, "indexGEZero");
-  //   Value *indexLTLength =
-  //       Builder.CreateICmpSLT(index, arrayLength, "indexLTLength");
-  //   Value *indexInRange = Builder.CreateAnd(indexGEZero, indexLTLength);
-  index = Builder.CreateAdd(index, oneV, "index");
+  // Emit the AccessIndexBB
 
-  // // * branch to the appropriate block
-  // Builder.CreateCondBr(indexInRange, indexInRangeBB, indexOutOfRangeBB);
-  // }
+  TheFunction->getBasicBlockList().push_back(AccessIndexBB);
+  Builder.SetInsertPoint(AccessIndexBB);
 
-  // // * Emit indexInRangeBB
-  // {
-  // TheFunction->getBasicBlockList().push_back(indexInRangeBB);
-  // Builder.SetInsertPoint(indexInRangeBB);
-
+  // * idx++
+  Value *idxPlusOne = Builder.CreateAdd(idx, oneV, "idxPlusOne");
   // * get the pointer to the element in the array
   Value *elemPtr =
       Builder.CreateGEP(arrayAddrInt64Ptr->getType()->getPointerElementType(),
-                        arrayAddrInt64Ptr, index, "elemPtr");
+                        arrayAddrInt64Ptr, idxPlusOne, "elemPtr");
 
-  Value *elem =
-      Builder.CreateLoad(Type::getInt64Ty(TheContext), elemPtr, "elem");
-
-  return elem;
-  // }
-
-  // // * Emit indexOutOfRangeBB
-  // {
-  //   TheFunction->getBasicBlockList().push_back(indexOutOfRangeBB);
-  //   Builder.SetInsertPoint(indexOutOfRangeBB);
-
-  //   // * throw an error
-  //   return Builder.CreateCall(nop);
-  // }
+  if (isLValue) {
+    // * if the array is being used as an l-value, return the pointer to the
+    // * element
+    return Builder.CreatePtrToInt(elemPtr, Type::getInt64Ty(TheContext),
+                                  "arrayPtr");
+  } else {
+    // * if the array is being used as an r-value, return the value of the
+    // * element
+    Value *elem =
+        Builder.CreateLoad(Type::getInt64Ty(TheContext), elemPtr, "elem");
+    return elem;
+  }
 }
