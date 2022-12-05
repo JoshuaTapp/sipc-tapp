@@ -1,6 +1,7 @@
 main(num, init, index) {
   var a;
+  output num;
   a = [num of init];
-  output a[index];
+  if(a[index] != init) error a[index];
   return 0;
 }
