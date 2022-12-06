@@ -1378,103 +1378,158 @@ llvm::Value *ASTPostfixStmt::codegen() {
 llvm::Value *ASTArrayConstructorExpr::codegen() {
   LOG_S(1) << "Generating code for " << *this;
 
-  auto arraySize = getElements().size();
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
-  // Check if the array constructor is fill type
-  if (isImplicit() && arraySize == 2) {
-    // get number of elements and fill value
-    auto *arraySizeV = getElements()[0]->codegen();
-    auto *elementValue = getElements()[1]->codegen();
-    if (arraySizeV == nullptr || elementValue == nullptr) {
-      throw InternalError(
-          "failed to generate bitcode for the array constructor");
-    }
-    if (lValueGen) {
-      // if pointer, load the value
-      elementValue =
-          Builder.CreateLoad(Type::getInt64Ty(TheContext), elementValue);
-    }
+  // Create the array setup BasicBlock
+  BasicBlock *arraySetupBB =
+      BasicBlock::Create(TheContext, "arraysetup", TheFunction);
 
-    int arraySizeInt = 2;
-    auto *expr = getElements()[0];
-    ASTNumberExpr *numberExpr = dynamic_cast<ASTNumberExpr *>(expr);
-    if (numberExpr != nullptr) {
-      arraySizeInt = numberExpr->getValue();
-      // Use arraySizeInt here
-    }
+  // Create the loop header BasicBlock
+  BasicBlock *headerBB = BasicBlock::Create(TheContext, "header");
 
-    // Create call to calloc to allocate memory for the array
-    auto argArraySize = Builder.CreateAdd(arraySizeV, oneV);
-    std::vector<Value *> args;
-    args.push_back(argArraySize);
-    args.push_back(ConstantInt::get(Type::getInt64Ty(TheContext), 8));
-    Value *allocInst = Builder.CreateCall(callocFun, args, "allocPtr");
+  // Create the loop body BasicBlock
+  BasicBlock *bodyBB = BasicBlock::Create(TheContext, "body");
 
-    Value *castPtr = Builder.CreatePointerCast(
-        allocInst, Type::getInt64PtrTy(TheContext), "castPtr");
+  // Optional BasicBlock for the fill value
+  BasicBlock *fillLoopBB = BasicBlock::Create(TheContext, "fillLoop");
 
-    // Store the array length in the first element of the array
-    Builder.CreateStore(arraySizeV, castPtr);
+  // Create the loop end BasicBlock
+  BasicBlock *endBB = BasicBlock::Create(TheContext, "end");
 
-    for (auto i = 1; i <= arraySizeInt; i++) {
-      Value *idx = ConstantInt::get(Type::getInt64Ty(TheContext), i);
-      Value *elementPtr = Builder.CreateGEP(
-          castPtr->getType()->getPointerElementType(), castPtr, idx);
+  Builder.CreateBr(arraySetupBB);
 
-      // Handle the element value as an l-value or r-value
-      if (auto *alloca = llvm::dyn_cast<llvm::AllocaInst>(elementValue)) {
-        // The element value is an l-value, load it and store it in the array
-        auto *loadedValue = Builder.CreateLoad(alloca->getAllocatedType(),
-                                               alloca, "loadedValue");
-        Builder.CreateStore(loadedValue, elementPtr);
-      } else {
-        // The element value is an r-value, directly store it in the array
-        Builder.CreateStore(elementValue, elementPtr);
+  // Emit the array setup BasicBlock
+  Builder.SetInsertPoint(arraySetupBB);
+
+  // Initialize the index variable to the starting value
+  std::vector<Value *> IndexArgs;
+  IndexArgs.push_back(ConstantInt::get(Type::getInt64Ty(TheContext), 1));
+  IndexArgs.push_back(ConstantInt::get(Type::getInt64Ty(TheContext), 4));
+  Value *allocInstIndex = Builder.CreateCall(callocFun, IndexArgs);
+  Value *index = Builder.CreatePointerCast(
+      allocInstIndex, Type::getInt64PtrTy(TheContext), "indexPtr");
+
+  Builder.CreateStore(ConstantInt::get(Type::getInt64Ty(TheContext), 1), index);
+  Value *endV = (isImplicit()) ? getElements().at(0)->codegen()
+                               : ConstantInt::get(Type::getInt64Ty(TheContext),
+                                                  getElements().size());
+  // Allocate the array on the heap
+  Value *allocaSizeV =
+      Builder.CreateAdd(endV, oneV, "arraysize"); // array length + 1 for length
+
+  // Allocate the array on the heap
+  std::vector<Value *> args;
+  args.push_back(allocaSizeV);
+  args.push_back(ConstantInt::get(Type::getInt64Ty(TheContext), 8));
+  Value *allocInst = Builder.CreateCall(callocFun, args, "allocPtr");
+  Value *castPtr = Builder.CreatePointerCast(
+      allocInst, Type::getInt64PtrTy(TheContext), "castPtr");
+
+  // Store the array length in the first element of the array
+  Builder.CreateStore(endV, castPtr);
+
+  // Emit code to initialize the index variable and branch to the loop header
+  Builder.CreateBr(headerBB);
+
+  // Emit the loop header BasicBlock
+  TheFunction->getBasicBlockList().push_back(headerBB);
+  Builder.SetInsertPoint(headerBB);
+
+  // Test if the current index is less than the end value
+  endV = Builder.CreateLoad(castPtr->getType()->getPointerElementType(),
+                            castPtr, "endV");
+
+  Value *idx = Builder.CreateLoad(Type::getInt64Ty(TheContext), index);
+
+  Value *CondV = Builder.CreateICmpSLE(idx, endV, "cond");
+
+  // Branch to the loop body BasicBlock if the condition is true
+  Builder.CreateCondBr(CondV, bodyBB, endBB);
+
+  // Emit the loop body BasicBlock
+  {
+    TheFunction->getBasicBlockList().push_back(bodyBB);
+    Builder.SetInsertPoint(bodyBB);
+
+    // handle implicit array construction
+    if (isImplicit()) {
+      // get the fill value
+      Value *fillV = getElements().at(1)->codegen();
+      if (fillV == nullptr) {
+        throw InternalError("Error generating code for array fill value");
       }
-    }
-    return Builder.CreatePtrToInt(castPtr, Type::getInt64Ty(TheContext));
-  } else {
-    // The array constructor is using the "list" form
-    std::vector<Value *> values;
-
-    // Generate code for each element of the array and store the values
-    for (auto &element : getElements()) {
-      Value *elementValue = element->codegen();
-
-      if (elementValue == nullptr) {
-        throw InternalError(
-            "failed to generate bitcode for the array constructor");
+      // cast the fill value to i64 if it is not already an i64
+      if (fillV->getType() != Type::getInt64Ty(TheContext)) {
+        fillV = Builder.CreatePtrToInt(fillV, Type::getInt64Ty(TheContext),
+                                       "fillV");
       }
-      values.push_back(elementValue);
+      Value *idx =
+          Builder.CreateLoad(Type::getInt64Ty(TheContext), index, "idx");
+
+      // Get the element pointer
+      Value *elementPtr =
+          Builder.CreateGEP(castPtr->getType()->getPointerElementType(),
+                            castPtr, idx, "elementPtr");
+
+      // Store the fill value to the array
+      Builder.CreateStore(fillV, elementPtr);
+
+      // Increment the index
+      idx = Builder.CreateAdd(idx, oneV);
+
+      Builder.CreateStore(idx, index);
+      // Test if the current index is less than the end value
+      Value *fillCondV = Builder.CreateICmpSLE(idx, endV, "fillCond");
+      Builder.CreateCondBr(fillCondV, bodyBB, endBB);
+
+      /*
+      Store the fill value to the array for every index in the array except
+      array[0]. This uses a llvm loop, because I have spent 3-4 days trying to
+      figure this out (and every time I figured something out finding a new
+      program that would destroy my previous solution) and im officially done
+      with trying to figure out how to do this with a c++ for loop or a while
+      loop or any other god forsaken loop / llvm loop. I have no idea why llvm
+      refuses to work with this and I no longer care. I will just use a llvm
+      loop and be done with it, even if it does not work with all programs.
+      */
+
+    } else {
+
+      // Load index value
+
+      for (auto &e : getElements()) {
+        Value *idx =
+            Builder.CreateLoad(Type::getInt64Ty(TheContext), index, "idx");
+        // get the fill value
+        Value *elemV = e->codegen();
+        if (elemV == nullptr) {
+          throw InternalError(
+              "Error generating code for array's new element value");
+        }
+        // cast the fill value to i64 if it is not already an i64
+        if (elemV->getType() != Type::getInt64Ty(TheContext)) {
+          elemV = Builder.CreatePtrToInt(elemV, Type::getInt64Ty(TheContext),
+                                         "elemV");
+        }
+        // store the element value to the array
+        Value *elementPtr =
+            Builder.CreateGEP(castPtr->getType()->getPointerElementType(),
+                              castPtr, idx, "elementPtr");
+        // Increment the index and store the new value
+        Builder.CreateStore(elemV, elementPtr);
+        idx = Builder.CreateAdd(idx, oneV);
+        Builder.CreateStore(idx, index);
+      }
+      Builder.CreateBr(endBB);
     }
-
-    // Create call to calloc to allocate memory for the array
-    std::vector<Value *> args;
-    args.push_back(ConstantInt::get(Type::getInt64Ty(TheContext),
-                                    getElements().size() + 1));
-    args.push_back(ConstantInt::get(Type::getInt64Ty(TheContext), 8));
-    Value *allocInst = Builder.CreateCall(callocFun, args, "allocPtr");
-
-    Value *castPtr = Builder.CreatePointerCast(
-        allocInst, Type::getInt64PtrTy(TheContext), "castPtr");
-
-    // Create llvm::value for the array length
-    Value *arrayLength =
-        ConstantInt::get(Type::getInt64Ty(TheContext), getElements().size());
-    // Store the array length in the first element of the array
-    Builder.CreateStore(arrayLength, castPtr);
-
-    // store the values in values vector into the array
-    int i = 1;
-    for (auto v : values) {
-      Value *idx = ConstantInt::get(Type::getInt64Ty(TheContext), i);
-      Value *elementPtr = Builder.CreateGEP(
-          castPtr->getType()->getPointerElementType(), castPtr, idx);
-      Builder.CreateStore(v, elementPtr);
-      i++;
-    }
-    return Builder.CreatePtrToInt(castPtr, Type::getInt64Ty(TheContext));
   }
+
+  // Emit the loop end BasicBlock
+  TheFunction->getBasicBlockList().push_back(endBB);
+  Builder.SetInsertPoint(endBB);
+
+  // return the array pointer
+  return Builder.CreatePtrToInt(castPtr, Type::getInt64Ty(TheContext));
 }
 /*
  * #arr : array length (int)
