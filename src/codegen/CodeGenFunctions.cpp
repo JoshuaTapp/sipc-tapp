@@ -1334,13 +1334,6 @@ llvm::Value *ASTPostfixStmt::codegen() {
  *      S
  *      start = start + 1
  *    }
- *
- *
-
-    TODO: fold.sip (type checking)
-    TODO: folds.sip (type checking)
-    TODO: sumfold.sip (type checking????) (seg fault: 11)
-    TODO: Linkedlist.tip (infinite loop?)
  */
 llvm::Value *ASTForStmt::codegen() {
   LOG_S(1) << "Generating code for " << *this;
@@ -1360,10 +1353,7 @@ llvm::Value *ASTForStmt::codegen() {
   // Create the basic block for the for loop initialization
 
   Builder.SetInsertPoint(ForInitBB);
-
-  // TODO: Setup the variables for the for loop
   /*
-    TODO: Index, start, end, step variables
       * Index can be used for both range and iterator based for loops
       * start will be E2 for range based for loop and 1 for iterator based
       * end will be E3 for range based for loop and #E2+1 for iterator based
@@ -1597,7 +1587,7 @@ llvm::Value *ASTForStmt::codegen() {
  * the Builder.CreatePtrToInt() method.
  *
  *  That last hurdle is how to generate the fill code. Because the
- * arrayLength is a LLVM::Value* and not a constant, we cannot use the our
+ * arrayLength is a LLVM::Value* and not a constant, we cannot use the
  * C++ for loop to generate the code. We need to use the LLVM IR Builder to
  * generate the loop code. This is done using the following steps:
  *
