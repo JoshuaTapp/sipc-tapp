@@ -849,82 +849,88 @@ public class TIPParser extends Parser {
 						break;
 					case 7:
 						{
-						_localctx = new TernaryExprContext(new ExprContext(_parentctx, _parentState));
-						pushNewRecursionContext(_localctx, _startState, RULE_expr);
-						setState(127);
-						if (!(precpred(_ctx, 10))) throw new FailedPredicateException(this, "precpred(_ctx, 10)");
-						setState(128);
-						match(T__8);
-						setState(129);
-						expr(0);
-						setState(130);
-						match(T__9);
-						setState(131);
-						expr(11);
-						}
-						break;
-					case 8:
-						{
 						_localctx = new FunAppExprContext(new ExprContext(_parentctx, _parentState));
 						pushNewRecursionContext(_localctx, _startState, RULE_expr);
-						setState(133);
+						setState(127);
 						if (!(precpred(_ctx, 24))) throw new FailedPredicateException(this, "precpred(_ctx, 24)");
-						setState(134);
+						setState(128);
 						match(T__0);
-						setState(143);
+						setState(137);
 						_errHandler.sync(this);
 						_la = _input.LA(1);
 						if ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << T__0) | (1L << T__3) | (1L << T__7) | (1L << MUL) | (1L << SUB) | (1L << LNOT) | (1L << LEN) | (1L << LSBR) | (1L << NUMBER) | (1L << BOOLEAN) | (1L << KALLOC) | (1L << KINPUT) | (1L << KNULL) | (1L << IDENTIFIER))) != 0)) {
 							{
-							setState(135);
+							setState(129);
 							expr(0);
-							setState(140);
+							setState(134);
 							_errHandler.sync(this);
 							_la = _input.LA(1);
 							while (_la==T__1) {
 								{
 								{
-								setState(136);
+								setState(130);
 								match(T__1);
-								setState(137);
+								setState(131);
 								expr(0);
 								}
 								}
-								setState(142);
+								setState(136);
 								_errHandler.sync(this);
 								_la = _input.LA(1);
 							}
 							}
 						}
 
-						setState(145);
+						setState(139);
 						match(T__2);
+						}
+						break;
+					case 8:
+						{
+						_localctx = new AccessExprContext(new ExprContext(_parentctx, _parentState));
+						pushNewRecursionContext(_localctx, _startState, RULE_expr);
+						setState(140);
+						if (!(precpred(_ctx, 23))) throw new FailedPredicateException(this, "precpred(_ctx, 23)");
+						setState(141);
+						match(T__6);
+						setState(142);
+						match(IDENTIFIER);
 						}
 						break;
 					case 9:
 						{
-						_localctx = new AccessExprContext(new ExprContext(_parentctx, _parentState));
+						_localctx = new ArraySubscriptExprContext(new ExprContext(_parentctx, _parentState));
 						pushNewRecursionContext(_localctx, _startState, RULE_expr);
+						setState(143);
+						if (!(precpred(_ctx, 22))) throw new FailedPredicateException(this, "precpred(_ctx, 22)");
+						setState(144);
+						match(LSBR);
+						setState(145);
+						expr(0);
 						setState(146);
-						if (!(precpred(_ctx, 23))) throw new FailedPredicateException(this, "precpred(_ctx, 23)");
-						setState(147);
-						match(T__6);
-						setState(148);
-						match(IDENTIFIER);
+						match(RSBR);
 						}
 						break;
 					case 10:
 						{
-						_localctx = new ArraySubscriptExprContext(new ExprContext(_parentctx, _parentState));
+						_localctx = new TernaryExprContext(new ExprContext(_parentctx, _parentState));
 						pushNewRecursionContext(_localctx, _startState, RULE_expr);
+						setState(148);
+						if (!(precpred(_ctx, 10))) throw new FailedPredicateException(this, "precpred(_ctx, 10)");
 						setState(149);
-						if (!(precpred(_ctx, 22))) throw new FailedPredicateException(this, "precpred(_ctx, 22)");
+						match(T__8);
+						{
+						{
 						setState(150);
-						match(LSBR);
-						setState(151);
 						expr(0);
+						}
+						setState(151);
+						match(T__9);
+						{
 						setState(152);
-						match(RSBR);
+						expr(0);
+						}
+						}
 						}
 						break;
 					}
@@ -1690,13 +1696,13 @@ public class TIPParser extends Parser {
 		case 5:
 			return precpred(_ctx, 11);
 		case 6:
-			return precpred(_ctx, 10);
-		case 7:
 			return precpred(_ctx, 24);
-		case 8:
+		case 7:
 			return precpred(_ctx, 23);
-		case 9:
+		case 8:
 			return precpred(_ctx, 22);
+		case 9:
+			return precpred(_ctx, 10);
 		}
 		return true;
 	}
@@ -1711,8 +1717,8 @@ public class TIPParser extends Parser {
 		"\4\3\4\3\5\3\5\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6"+
 		"\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\5\6n\n\6\3\6\3\6\3\6\3\6\3\6"+
 		"\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3"+
-		"\6\3\6\3\6\3\6\3\6\3\6\3\6\7\6\u008d\n\6\f\6\16\6\u0090\13\6\5\6\u0092"+
-		"\n\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\7\6\u009d\n\6\f\6\16\6\u00a0"+
+		"\6\7\6\u0087\n\6\f\6\16\6\u008a\13\6\5\6\u008c\n\6\3\6\3\6\3\6\3\6\3\6"+
+		"\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\3\6\7\6\u009d\n\6\f\6\16\6\u00a0"+
 		"\13\6\3\7\3\7\3\7\3\7\7\7\u00a6\n\7\f\7\16\7\u00a9\13\7\5\7\u00ab\n\7"+
 		"\3\7\3\7\3\b\3\b\3\b\3\b\3\t\3\t\3\t\3\t\3\t\3\t\3\t\3\t\3\t\3\t\7\t\u00bd"+
 		"\n\t\f\t\16\t\u00c0\13\t\5\t\u00c2\n\t\3\t\5\t\u00c5\n\t\3\n\3\n\3\n\3"+
@@ -1744,17 +1750,17 @@ public class TIPParser extends Parser {
 		"\2\2pq\t\2\2\2q\u009d\5\n\6\23rs\f\21\2\2st\t\3\2\2t\u009d\5\n\6\22uv"+
 		"\f\20\2\2vw\t\4\2\2w\u009d\5\n\6\21xy\f\17\2\2yz\t\5\2\2z\u009d\5\n\6"+
 		"\20{|\f\16\2\2|}\7\32\2\2}\u009d\5\n\6\17~\177\f\r\2\2\177\u0080\7\33"+
-		"\2\2\u0080\u009d\5\n\6\16\u0081\u0082\f\f\2\2\u0082\u0083\7\13\2\2\u0083"+
-		"\u0084\5\n\6\2\u0084\u0085\7\f\2\2\u0085\u0086\5\n\6\r\u0086\u009d\3\2"+
-		"\2\2\u0087\u0088\f\32\2\2\u0088\u0091\7\3\2\2\u0089\u008e\5\n\6\2\u008a"+
-		"\u008b\7\4\2\2\u008b\u008d\5\n\6\2\u008c\u008a\3\2\2\2\u008d\u0090\3\2"+
-		"\2\2\u008e\u008c\3\2\2\2\u008e\u008f\3\2\2\2\u008f\u0092\3\2\2\2\u0090"+
-		"\u008e\3\2\2\2\u0091\u0089\3\2\2\2\u0091\u0092\3\2\2\2\u0092\u0093\3\2"+
-		"\2\2\u0093\u009d\7\5\2\2\u0094\u0095\f\31\2\2\u0095\u0096\7\t\2\2\u0096"+
-		"\u009d\7\66\2\2\u0097\u0098\f\30\2\2\u0098\u0099\7\37\2\2\u0099\u009a"+
-		"\5\n\6\2\u009a\u009b\7 \2\2\u009b\u009d\3\2\2\2\u009co\3\2\2\2\u009cr"+
-		"\3\2\2\2\u009cu\3\2\2\2\u009cx\3\2\2\2\u009c{\3\2\2\2\u009c~\3\2\2\2\u009c"+
-		"\u0081\3\2\2\2\u009c\u0087\3\2\2\2\u009c\u0094\3\2\2\2\u009c\u0097\3\2"+
+		"\2\2\u0080\u009d\5\n\6\16\u0081\u0082\f\32\2\2\u0082\u008b\7\3\2\2\u0083"+
+		"\u0088\5\n\6\2\u0084\u0085\7\4\2\2\u0085\u0087\5\n\6\2\u0086\u0084\3\2"+
+		"\2\2\u0087\u008a\3\2\2\2\u0088\u0086\3\2\2\2\u0088\u0089\3\2\2\2\u0089"+
+		"\u008c\3\2\2\2\u008a\u0088\3\2\2\2\u008b\u0083\3\2\2\2\u008b\u008c\3\2"+
+		"\2\2\u008c\u008d\3\2\2\2\u008d\u009d\7\5\2\2\u008e\u008f\f\31\2\2\u008f"+
+		"\u0090\7\t\2\2\u0090\u009d\7\66\2\2\u0091\u0092\f\30\2\2\u0092\u0093\7"+
+		"\37\2\2\u0093\u0094\5\n\6\2\u0094\u0095\7 \2\2\u0095\u009d\3\2\2\2\u0096"+
+		"\u0097\f\f\2\2\u0097\u0098\7\13\2\2\u0098\u0099\5\n\6\2\u0099\u009a\7"+
+		"\f\2\2\u009a\u009b\5\n\6\2\u009b\u009d\3\2\2\2\u009co\3\2\2\2\u009cr\3"+
+		"\2\2\2\u009cu\3\2\2\2\u009cx\3\2\2\2\u009c{\3\2\2\2\u009c~\3\2\2\2\u009c"+
+		"\u0081\3\2\2\2\u009c\u008e\3\2\2\2\u009c\u0091\3\2\2\2\u009c\u0096\3\2"+
 		"\2\2\u009d\u00a0\3\2\2\2\u009e\u009c\3\2\2\2\u009e\u009f\3\2\2\2\u009f"+
 		"\13\3\2\2\2\u00a0\u009e\3\2\2\2\u00a1\u00aa\7\6\2\2\u00a2\u00a7\5\16\b"+
 		"\2\u00a3\u00a4\7\4\2\2\u00a4\u00a6\5\16\b\2\u00a5\u00a3\3\2\2\2\u00a6"+
@@ -1791,7 +1797,7 @@ public class TIPParser extends Parser {
 		"\6\2\u0104\u0105\7!\2\2\u0105\u0107\5\n\6\2\u0106\u0104\3\2\2\2\u0106"+
 		"\u0107\3\2\2\2\u0107\u0109\3\2\2\2\u0108\u0102\3\2\2\2\u0108\u0109\3\2"+
 		"\2\2\u0109\u010a\3\2\2\2\u010a\u010b\7\5\2\2\u010b\u010c\5\22\n\2\u010c"+
-		"%\3\2\2\2\27)\62\65<BNm\u008e\u0091\u009c\u009e\u00a7\u00aa\u00be\u00c1"+
+		"%\3\2\2\2\27)\62\65<BNm\u0088\u008b\u009c\u009e\u00a7\u00aa\u00be\u00c1"+
 		"\u00c4\u00ce\u00d9\u00eb\u0106\u0108";
 	public static final ATN _ATN =
 		new ATNDeserializer().deserialize(_serializedATN.toCharArray());

@@ -21,5 +21,4 @@ public:
   static void check(ASTProgram *p);
   virtual void endVisit(ASTAssignStmt *element) override;
   virtual void endVisit(ASTRefExpr *element) override;
-  virtual void endVisit(ASTArraySubscriptExpr *element) override;
 };

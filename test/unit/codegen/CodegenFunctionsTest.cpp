@@ -149,4 +149,51 @@ TEST_CASE("CodegenFunction: ASTTernaryExpr throws InternalError on falseValue "
   REQUIRE_THROWS_AS(ternaryExpr.codegen(), InternalError);
 }
 
+TEST_CASE("CodegenFunction: ASTPostfixExpr throws InternalError on VAR codegen "
+          "nullptr",
+          "[CodegenFunctions]") {
+  ASTPostfixStmt postfixStmt(std::make_unique<nullcodegen::MockASTExpr>(),
+                             "++");
+  REQUIRE_THROWS_AS(postfixStmt.codegen(), InternalError);
+}
 
+TEST_CASE("CodegenFunction: ASTPostfixExpr throws InternalError on bad OP",
+          "[CodegenFunctions]") {
+  ASTPostfixStmt postfixStmt(std::make_unique<ASTVariableExpr>("x"), "-|");
+  REQUIRE_THROWS_AS(postfixStmt.codegen(), InternalError);
+}
+
+// test ASTArrayLengthExpr
+TEST_CASE("CodegenFunction: ASTArrayLengthExpr throws InternalError on VAR "
+          "codegen nullptr",
+          "[CodegenFunctions]") {
+  ASTArrayLengthExpr arrayLengthExpr(
+      std::make_unique<nullcodegen::MockASTExpr>());
+  REQUIRE_THROWS_AS(arrayLengthExpr.codegen(), InternalError);
+}
+
+// test ASTBooleanExpr
+TEST_CASE("CodegenFunction: ASTBooleanExpr codegen", "[CodegenFunctions]") {
+  ASTBooleanExpr booleanExpr(true);
+  REQUIRE(booleanExpr.codegen() != nullptr);
+}
+
+// test ASTNumberExpr
+TEST_CASE("CodegenFunction: ASTNumberExpr codegen", "[CodegenFunctions]") {
+  ASTNumberExpr numberExpr(42);
+  REQUIRE(numberExpr.codegen() != nullptr);
+}
+
+// test ASTUnaryExpr
+TEST_CASE("CodegenFunction: ASTUnaryExpr throws InternalError on VAR codegen "
+          "nullptr",
+          "[CodegenFunctions]") {
+  ASTUnaryExpr unaryExpr("-", std::make_unique<nullcodegen::MockASTExpr>());
+  REQUIRE_THROWS_AS(unaryExpr.codegen(), InternalError);
+}
+
+TEST_CASE("CodegenFunction: ASTUnaryExpr throws InternalError on bad OP",
+          "[CodegenFunctions]") {
+  ASTUnaryExpr unaryExpr("-|", std::make_unique<ASTVariableExpr>("x"));
+  REQUIRE_THROWS_AS(unaryExpr.codegen(), InternalError);
+}

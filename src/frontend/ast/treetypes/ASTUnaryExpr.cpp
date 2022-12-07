@@ -22,5 +22,3 @@ std::vector<std::shared_ptr<ASTNode>> ASTUnaryExpr::getChildren() {
   children.push_back(expr);
   return children;
 }
-
-llvm::Value *ASTUnaryExpr::codegen() { return nullptr; }

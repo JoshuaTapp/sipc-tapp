@@ -38,7 +38,7 @@ endif()
 ######## ANTLR4 CPP target rules ###########
 
 cmake_policy(PUSH)
-# Allow the antlr jar to be found without execute permissions. 
+# Allow the antlr jar to be found without execute permissions.
 cmake_policy(SET CMP0109 OLD)
 cmake_policy(SET CMP0114 NEW)
 

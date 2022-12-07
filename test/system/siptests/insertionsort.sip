@@ -10,23 +10,23 @@ sort(a) {
      */
     break = false;
     while (j >= 0 and not break) {
-      if (a[j] > k) { 
+      if (a[j] > k) {
         a[j+1] = a[j];
-        j--;       
+        j--;
       } else {
         break = true;
       }
     }
 
     a[j+1] = k;
-  } 
+  }
   return a;
 }
 
 copy(a) {
   var b, i;
   b = [ #a of 0 ];	// computed array initialization
-  for (i : 0 .. #a) {   
+  for (i : 0 .. #a) {
     b[i] = a[i];
   }
   return b;

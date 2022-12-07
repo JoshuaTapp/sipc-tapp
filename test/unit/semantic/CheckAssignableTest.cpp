@@ -117,20 +117,3 @@ TEST_CASE("Check Assignable: address of expr", "[Symbol]") {
   REQUIRE_THROWS_MATCHES(CheckAssignable::check(ast.get()), SemanticError,
                          ContainsWhat("(y*y) not an l-value"));
 }
-
-// test CheckAssignable for ASTArraySubscriptExpr
-
-TEST_CASE("Check Assignable: array subscript lhs", "[Symbol]") {
-  std::stringstream stream;
-  stream << R"(arraysublhs() { var x; x = [1]; return x[0]; })";
-  auto ast = ASTHelper::build_ast(stream);
-  REQUIRE_NOTHROW(CheckAssignable::check(ast.get()));
-}
-
-TEST_CASE("Check Assignable: address of array", "[Symbol]") {
-  std::stringstream stream;
-  stream << R"(arraysublhs() { return 1[0]; })";
-  auto ast = ASTHelper::build_ast(stream);
-  REQUIRE_THROWS_MATCHES(CheckAssignable::check(ast.get()), SemanticError,
-                         ContainsWhat("1 not an l-value"));
-}

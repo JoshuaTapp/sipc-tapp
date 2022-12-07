@@ -458,6 +458,8 @@ void TypeConstraintVisitor::endVisit(ASTPostfixStmt *element) {
  *    [[E1 ? E2 : E3]] = \alpha
  */
 void TypeConstraintVisitor::endVisit(ASTTernaryExpr *element) {
+  constraintHandler->handle(astToVar(element),
+                            std::make_shared<TipAlpha>(element));
   constraintHandler->handle(astToVar(element->getCond()),
                             std::make_shared<TipBoolean>());
   constraintHandler->handle(astToVar(element->getTrueExpr()),
@@ -465,9 +467,6 @@ void TypeConstraintVisitor::endVisit(ASTTernaryExpr *element) {
   constraintHandler->handle(
       astToVar(element->getFalseExpr()),
       std::make_shared<TipAlpha>(element->getFalseExpr()));
-
-  constraintHandler->handle(astToVar(element),
-                            std::make_shared<TipAlpha>(element));
 }
 
 /*! \brief Type constraints for For Loop: both range and iterator.

@@ -55,7 +55,3 @@ std::vector<std::shared_ptr<ASTNode>> ASTArrayConstructorExpr::getChildren() {
   }
   return children;
 }
-
-llvm::Value *ASTArrayConstructorExpr::codegen() {
-  return nullptr;
-} // LCOV_EXCL_LINE
