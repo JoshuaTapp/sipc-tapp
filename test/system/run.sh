@@ -64,6 +64,65 @@ do
   rm $i.bc
 done
 
+# Tests for programs using the .sip file extension
+for i in siptests/*.sip
+do
+  base="$(basename $i .sip)"
+
+  # test optimized program
+  initialize_test
+  if [[ $base == *"fold"* || $base == *"map"* ]]; then
+    # Disable type checking for programs whose names contain "fold" or "map"
+    ${TIPC}  --dt  $i
+  else
+    ${TIPC} $i
+  fi
+  ${TIPCLANG} -w $i.bc ${RTLIB}/tip_rtlib.bc -o $base
+
+  if [[ $base == *"arrayref"* ]]; then
+      ./${base} 3 3 1 &>/dev/null
+  else
+      ./${base} &>/dev/null
+  fi
+  exit_code=${?}
+  if [ ${exit_code} -ne 0 ]; then
+    echo -n "Test failure for : "
+    echo $i
+    ./${base}
+    ((numfailures++))
+  else
+    rm ${base}
+  fi
+  rm $i.bc
+
+  # test unoptimized program
+  initialize_test
+    if [[ $base == *"fold"* || $base == *"map"* ]]; then
+    # Disable type checking for programs whose names contain "fold" or "map"
+    ${TIPC} --dt --do $i
+  else
+    ${TIPC} --do $i
+  fi
+  ${TIPCLANG} -w $i.bc ${RTLIB}/tip_rtlib.bc -o $base
+
+  if [[ $base == *"arrayref"* ]]; then
+      ./${base} 3 3 1 &>/dev/null
+  else
+      ./${base} &>/dev/null
+  fi
+  exit_code=${?}
+  if [ ${exit_code} -ne 0 ]; then
+    echo -n "Test failure for : "
+    echo $i
+    ./${base}
+    ((numfailures++))
+  else
+    rm ${base}
+  fi
+  rm $i.bc
+done
+
+
 # IO related test cases
 for i in iotests/*.expected
 do

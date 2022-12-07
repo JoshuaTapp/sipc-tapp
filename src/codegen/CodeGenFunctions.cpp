@@ -1232,28 +1232,21 @@ llvm::Value *ASTTernaryExpr::codegen() {
 
   Value *CondV = getCond()->codegen();
   if (CondV == nullptr) {
-    throw InternalError("failed to generate bitcode for the condition of the "
-                        "ternary expression");
+    throw InternalError(
+        "failed to generate bitcode for the condition of the if statement");
   }
 
   // Convert condition to a bool by comparing non-equal to 0.
-  CondV = Builder.CreateICmpEQ(CondV, zeroV, "terncond");
-
-  // select the appropriate value based on the condition
-  Value *trueV = getTrueExpr()->codegen();
-  if (trueV == nullptr) {
-    throw InternalError("failed to generate bitcode for the true expression of "
-                        "the ternary expression");
-  }
-  Value *falseV = getFalseExpr()->codegen();
-  if (falseV == nullptr) {
+  CondV = Builder.CreateICmpEQ(CondV, ConstantInt::get(CondV->getType(), 0),
+                               "terncond");
+  if (getTrueExpr()->codegen() == nullptr ||
+      getFalseExpr()->codegen() == nullptr) {
     throw InternalError(
-        "failed to generate bitcode for the false expression of "
-        "the ternary expression");
+        "failed to generate bitcode for the true or false expression of the "
+        "ternary expression");
   }
-
-  // Based on condition, return the appropriate value
-  return Builder.CreateSelect(CondV, trueV, falseV);
+  return Builder.CreateSelect(CondV, getTrueExpr()->codegen(),
+                              getFalseExpr()->codegen(), "ternary");
 } // LCOV_EXCL_LINE
 
 llvm::Value *ASTPostfixStmt::codegen() {
@@ -1317,29 +1310,271 @@ llvm::Value *ASTPostfixStmt::codegen() {
   }
 } // LCOV_EXCL_LINE
 
-// llvm::Value *ASTForStmt::codegen() {
-//   LOG_S(1) << "Generating code for " << *this;
-
 /*
-  * We have two versions of the for loop. The first is the range-based for
-  * loop "for (E1 : E2 .. E3 by E4) S". The second is the iterator-based for
-  * loop "for (E1 : E2) S".
-  *
-  * The range-based for loop is translated into the following code:
-  *   E1 = E2
-  *   while (E1 <= E3) {
-  *     S
-  *     E1 = E1 + E4
-  *   }
-  *
-//}
-  * The iterator-based for loop is translated into the following code:
-  *   E1 = E2.begin()
-  *   while (E1 != E2.end()) {
-  *     S
-  *     E1 = E1.next()
-  *   }
-*/
+ * THE FOR LOOP
+ *
+ * We have two versions of the for loop. The first is the range-based for
+ * loop "for (E1 : E2 .. E3 by E4) S"
+ *
+ * The second is the iterator-based for loop "for (E1 : E2) S".
+ *
+ * The range-based for loop is translated into the following code:
+ *    E1 = E2
+ *    E4 = (E4 == NULLPTR) ? 1 : E4 // default step size is 1
+ *    while (E1 <= E3) {
+ *      S
+ *      E1 = E1 + E4
+ *    }
+ *
+ * The iterator-based for loop is translated into the following code:
+ *    start = 1
+ *    end = #E2 + 1
+ *    while (start < end) {
+ *      E1 = E2[start]
+ *      S
+ *      start = start + 1
+ *    }
+ *
+ *
+
+    TODO: fold.sip (type checking)
+    TODO: folds.sip (type checking)
+    TODO: sumfold.sip (type checking????) (seg fault: 11)
+    TODO: Linkedlist.tip (infinite loop?)
+ */
+llvm::Value *ASTForStmt::codegen() {
+  LOG_S(1) << "Generating code for " << *this;
+
+  llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+
+  // Create basic blocks for the for loop
+  labelNum++; // create unique labels for these BBs
+  BasicBlock *ForInitBB = BasicBlock::Create(
+      TheContext, "forinit" + std::to_string(labelNum), TheFunction);
+  BasicBlock *ForCondBB = BasicBlock::Create(TheContext, "forcond");
+  BasicBlock *ForBodyBB = BasicBlock::Create(TheContext, "forbody");
+  BasicBlock *ForIncBB = BasicBlock::Create(TheContext, "forinc");
+  BasicBlock *ForEndBB = BasicBlock::Create(TheContext, "forend");
+
+  Builder.CreateBr(ForInitBB);
+  // Create the basic block for the for loop initialization
+
+  Builder.SetInsertPoint(ForInitBB);
+
+  // TODO: Setup the variables for the for loop
+  /*
+    TODO: Index, start, end, step variables
+      * Index can be used for both range and iterator based for loops
+      * start will be E2 for range based for loop and 1 for iterator based
+      * end will be E3 for range based for loop and #E2+1 for iterator based
+      * step will be E4 for range based for loop and 1 for iterator based
+      *   Can check if E4->codegen() == nullptr to determine if it is
+      *   set or not. (E4 == NULLPTR) ? 1 : E4
+      *
+      * If E3 is not set, then it is iterator based for loop
+      * If E3 is set, then it is range based for loop
+  */
+  bool isRangeBased = (getE3() != nullptr);
+  Value *indexV = nullptr;
+  Value *startV = nullptr;
+  Value *endV = nullptr;
+  Value *stepV = nullptr;
+  Value *arrayPtr = nullptr;
+
+  /*
+   * Remember, Index is a pointer to the variable that stores the index /
+   * element of the array.
+   *
+   * For the range based for loop, the index is the variable that stores the
+   * current "i" value of the loop. For the iterator based for loop, the index
+   * is the variable that stores the current element of the array (e.g.
+   * E2[i]).
+   *
+   */
+
+  if (isRangeBased) {
+    // * Range Based For Loop
+
+    // * Start Initialization
+    startV = getE2()->codegen();
+    if (startV == nullptr) {
+      throw InternalError("failed to generate bitcode for the start of the "
+                          "range based for loop");
+    }
+
+    // * index Initialization
+    lValueGen = true;
+    indexV = getE1()->codegen();
+    lValueGen = false;
+    if (indexV == nullptr) {
+      throw InternalError("failed to generate bitcode for the index of the "
+                          "range based for loop");
+    }
+    // Store the start value into the index variable
+    indexV = Builder.CreateIntToPtr(indexV, Type::getInt64PtrTy(TheContext),
+                                    "indexPtr");
+    Builder.CreateStore(startV, indexV);
+
+    // * End Initialization
+    endV = getE3()->codegen();
+    if (endV == nullptr) {
+      throw InternalError("failed to generate bitcode for the end of the "
+                          "range based for loop");
+    }
+
+    // * Step Initialization
+    if (getE4() == nullptr) {
+      // if step is not set, then set it to 1
+      stepV = ConstantInt::get(Type::getInt64Ty(TheContext), 1);
+    } else {
+      stepV = getE4()->codegen();
+      if (stepV == nullptr) {
+        throw InternalError("failed to generate bitcode for the step of the "
+                            "range based for loop");
+      }
+    }
+  } else {
+    // * Iterator Based For Loop
+
+    // * Get the array pointer
+    arrayPtr = getE2()->codegen();
+    if (arrayPtr == nullptr) {
+      throw InternalError("failed to generate bitcode for the array of the "
+                          "iterator based for loop");
+    }
+    if (arrayPtr->getType() != Type::getInt64PtrTy(TheContext)) {
+      arrayPtr = Builder.CreateIntToPtr(
+          arrayPtr, Type::getInt64PtrTy(TheContext), "array");
+    }
+
+    // * get the pointer to the last element in array
+    Value *arrayLength = Builder.CreateLoad(
+        arrayPtr->getType()->getPointerElementType(), arrayPtr, "arrayLength");
+    arrayLength = Builder.CreateAdd(arrayLength, oneV, "lastIdx");
+    // * Ptr to the last element in array
+    endV = Builder.CreateGEP(arrayPtr->getType()->getPointerElementType(),
+                             arrayPtr, arrayLength, "endElemPtr");
+    endV =
+        Builder.CreateIntToPtr(endV, Type::getInt64PtrTy(TheContext), "endPtr");
+    // * allocate space for start and store &array[1] into it
+    std::vector<Value *> args;
+    args.push_back(oneV);
+    args.push_back(ConstantInt::get(Type::getInt64Ty(TheContext), 8));
+    Value *allocInst = Builder.CreateCall(callocFun, args, "allocPtr");
+    startV = Builder.CreatePointerCast(
+        allocInst, Type::getInt64PtrTy(TheContext), "startPtr");
+
+    Value *tmp = Builder.CreateGEP(arrayPtr->getType()->getPointerElementType(),
+                                   arrayPtr, oneV);
+    tmp = Builder.CreatePtrToInt(tmp, Type::getInt64Ty(TheContext));
+    Builder.CreateStore(tmp, startV);
+  }
+
+  // Create a branch to the for loop condition
+  Builder.CreateBr(ForCondBB);
+
+  // Create the basic block for the for loop condition
+  TheFunction->getBasicBlockList().push_back(ForCondBB);
+  Builder.SetInsertPoint(ForCondBB);
+
+  // Create the condition for the for loop
+  Value *condV = nullptr;
+  if (isRangeBased) {
+    // * Range Based For Loop
+    // * Check if the index is less than the end
+    Value *indexLoadV =
+        Builder.CreateLoad(Type::getInt64Ty(TheContext), indexV, "indexLoad");
+    condV = Builder.CreateICmpSLT(indexLoadV, endV, "cond");
+  } else {
+    // * Iterator Based For Loop
+    // * Check if the start pointer != end pointer
+    Value *startPtrV = Builder.CreateLoad(
+        startV->getType()->getPointerElementType(), startV, "startPtrLoad");
+    startPtrV = Builder.CreateIntToPtr(
+        startPtrV, Type::getInt64PtrTy(TheContext), "startPtrLoadPtr");
+    condV = Builder.CreateICmpNE(startPtrV, endV, "cond");
+  }
+
+  // Create a branch to the for loop body or the for loop exit
+  Builder.CreateCondBr(condV, ForBodyBB, ForEndBB);
+
+  // Create the basic block for the for loop body
+  TheFunction->getBasicBlockList().push_back(ForBodyBB);
+  Builder.SetInsertPoint(ForBodyBB);
+
+  // Generate the body of the for loop
+
+  if (isRangeBased) {
+    // * Range Based For Loop
+
+    // Load index value
+    Value *indexLoadV =
+        Builder.CreateLoad(Type::getInt64Ty(TheContext), indexV, "indexLoad");
+    Value *LoopBodyV = getBody()->codegen();
+    if (LoopBodyV == nullptr) {
+      throw InternalError("failed to generate bitcode for the body of the "
+                          "range based for loop");
+    }
+
+    // Increment the index and store back to the index variable
+    Value *nextIndexV = Builder.CreateAdd(indexLoadV, stepV, "nextIndex");
+    Builder.CreateStore(nextIndexV, indexV);
+
+    // Create a branch to the for loop condition
+    Builder.CreateBr(ForCondBB);
+  } else {
+    // * Iterator Based For Loop
+
+    // * Index Initialization
+    // * This is a variable that will store array[i]
+    lValueGen = true;
+    indexV = getE1()->codegen();
+    lValueGen = false;
+    if (indexV == nullptr) {
+      throw InternalError("failed to generate bitcode for the index of the "
+                          "iterator based for loop");
+    }
+
+    // * Load StartV pointer
+    Value *startPtrV = Builder.CreateLoad(
+        startV->getType()->getPointerElementType(), startV, "startPtrLoad");
+    startPtrV = Builder.CreateIntToPtr(
+        startPtrV, Type::getInt64PtrTy(TheContext), "startPtrLoadPtr");
+
+    // * Load the value of the array at the current index
+    Value *startElemV = Builder.CreateLoad(
+        startPtrV->getType()->getPointerElementType(), startPtrV, "loadElem");
+
+    // * Store the value of the array at the current index into the index
+    // variable
+    indexV = Builder.CreateIntToPtr(indexV, Type::getInt64PtrTy(TheContext),
+                                    "indexPtr");
+    Builder.CreateStore(startElemV, indexV);
+
+    // Generate the body of the for loop
+    Value *LoopBodyV = getBody()->codegen();
+    if (LoopBodyV == nullptr) {
+      throw InternalError("failed to generate bitcode for the body of the "
+                          "iterator based for loop");
+    }
+
+    // start = start.next
+    Value *nextStartV =
+        Builder.CreateGEP(startV->getType()->getPointerElementType(), startPtrV,
+                          oneV, "startPtr");
+    nextStartV =
+        Builder.CreatePtrToInt(nextStartV, Type::getInt64Ty(TheContext));
+    // startV = startV.next
+    Builder.CreateStore(nextStartV, startV);
+    // Create a branch to the for loop condition
+    Builder.CreateBr(ForCondBB);
+  }
+
+  // Create the basic block for the for loop exit
+  TheFunction->getBasicBlockList().push_back(ForEndBB);
+  Builder.SetInsertPoint(ForEndBB);
+  return Builder.CreateCall(nop);
+}
 
 /*
  *  Array Construction
@@ -1357,14 +1592,14 @@ llvm::Value *ASTPostfixStmt::codegen() {
  *  method similar to ASTDeRefExpr::codegen(). We need to repeat the same
  *  for the array elements (whether using a fill value or a list of values).
  *
- *  Because all elements will be stored as i64, we need to cast the fill/element
- *  value to i64 if it is not already an i64. This is done using the
- *  Builder.CreatePtrToInt() method.
+ *  Because all elements will be stored as i64, we need to cast the
+ * fill/element value to i64 if it is not already an i64. This is done using
+ * the Builder.CreatePtrToInt() method.
  *
- *  That last hurdle is how to generate the fill code. Because the arrayLength
- *  is a LLVM::Value* and not a constant, we cannot use the our C++ for loop
- *  to generate the code. We need to use the LLVM IR Builder to generate the
- *  loop code. This is done using the following steps:
+ *  That last hurdle is how to generate the fill code. Because the
+ * arrayLength is a LLVM::Value* and not a constant, we cannot use the our
+ * C++ for loop to generate the code. We need to use the LLVM IR Builder to
+ * generate the loop code. This is done using the following steps:
  *
  *  1. Create the BasicBlock for the loop stages (loop, loopbody, loopend)
  *  2. Loop BasicBlock: generate the array, length, fill value. Then create
@@ -1428,7 +1663,8 @@ llvm::Value *ASTArrayConstructorExpr::codegen() {
   // Store the array length in the first element of the array
   Builder.CreateStore(endV, castPtr);
 
-  // Emit code to initialize the index variable and branch to the loop header
+  // Emit code to initialize the index variable and branch to the loop
+  // header
   Builder.CreateBr(headerBB);
 
   // Emit the loop header BasicBlock
@@ -1484,13 +1720,14 @@ llvm::Value *ASTArrayConstructorExpr::codegen() {
 
       /*
       Store the fill value to the array for every index in the array except
-      array[0]. This uses a llvm loop, because I have spent 3-4 days trying to
-      figure this out (and every time I figured something out finding a new
-      program that would destroy my previous solution) and im officially done
-      with trying to figure out how to do this with a c++ for loop or a while
-      loop or any other god forsaken loop / llvm loop. I have no idea why llvm
-      refuses to work with this and I no longer care. I will just use a llvm
-      loop and be done with it, even if it does not work with all programs.
+      array[0]. This uses a llvm loop, because I have spent 3-4 days trying
+      to figure this out (and every time I figured something out finding a
+      new program that would destroy my previous solution) and im officially
+      done with trying to figure out how to do this with a c++ for loop or a
+      while loop or any other god forsaken loop / llvm loop. I have no idea
+      why llvm refuses to work with this and I no longer care. I will just
+      use a llvm loop and be done with it, even if it does not work with all
+      programs.
       */
 
     } else {
@@ -1534,10 +1771,10 @@ llvm::Value *ASTArrayConstructorExpr::codegen() {
 /*
  * #arr : array length (int)
  *
- * Because the array is stored as a pointer, we need to get the pointer to the
- * array and access array[0] to get the length of the array.
- * Following the ASTDeRefExpr::codegen() function pattern, but without the
- * need to handle LValues (as the value is always int64).
+ * Because the array is stored as a pointer, we need to get the pointer to
+ * the array and access array[0] to get the length of the array. Following
+ * the ASTDeRefExpr::codegen() function pattern, but without the need to
+ * handle LValues (as the value is always int64).
  */
 llvm::Value *ASTArrayLengthExpr::codegen() {
   LOG_S(1) << "Generating code for " << *this;
@@ -1573,8 +1810,8 @@ llvm::Value *ASTArrayLengthExpr::codegen() {
 /*
  * array reference
  *
- * Because the array is stored as a pointer, we need to get the pointer to the
- * array and access array[idx] to get the element at the index.
+ * Because the array is stored as a pointer, we need to get the pointer to
+ * the array and access array[idx] to get the element at the index.
  * Following the ASTDeRefExpr::codegen() function pattern, but without the
  * need to handle LValues (as the value is always int64).
  */
@@ -1593,7 +1830,8 @@ llvm::Value *ASTArraySubscriptExpr::codegen() {
   bool isLValue = lValueGen;
 
   if (isLValue) {
-    // This flag is reset here so that sub-expressions are treated as r-values
+    // This flag is reset here so that sub-expressions are treated as
+    // r-values
     lValueGen = false;
   }
   Builder.CreateBr(ArraySubscriptBB);
@@ -1615,9 +1853,6 @@ llvm::Value *ASTArraySubscriptExpr::codegen() {
   // Handle the case where the index is an l - value by using the ASTDeRef
   //  codegen method.
   Value *idx = getIndex()->codegen();
-  if (isLValue) {
-    idx = Builder.CreateLoad(Type::getInt64Ty(TheContext), idx, "idx");
-  }
   if (idx == nullptr) {
     throw InternalError("failed to generate bitcode for the index of the "
                         "array length expression");
@@ -1666,6 +1901,10 @@ llvm::Value *ASTArraySubscriptExpr::codegen() {
       Builder.CreateGEP(arrayPtr->getType()->getPointerElementType(), arrayPtr,
                         idxPlusOne, "elemPtr");
 
-  return Builder.CreateLoad(elemPtr->getType()->getPointerElementType(),
-                            elemPtr, "elem");
+  if (isLValue) {
+    return elemPtr;
+  } else {
+    return Builder.CreateLoad(elemPtr->getType()->getPointerElementType(),
+                              elemPtr, "elem");
+  }
 }

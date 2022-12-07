@@ -1,6 +1,6 @@
-main(i) {
+main(i, a, b) {
     var arr;
     arr = [0, 1, 2, 3];
-    output arr[i];
+    if(arr[i] != i) error arr[i];
     return 0;
 }

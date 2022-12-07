@@ -43,6 +43,9 @@ static cl::opt<std::string>
     logfile("log", cl::value_desc("logfile"),
             cl::desc("log all messages to logfile (enables --verbose 3)"),
             cl::cat(TIPcat));
+static cl::opt<bool> dt("dt", cl::desc("disable type checking (overrides -pt)"),
+                        cl::cat(TIPcat));
+
 static cl::opt<std::string> sourceFile(cl::Positional,
                                        cl::desc("<tip source file>"),
                                        cl::Required, cl::cat(TIPcat));
@@ -95,13 +98,13 @@ int main(int argc, char *argv[]) {
     std::shared_ptr<ASTProgram> ast = std::move(FrontEnd::parse(stream));
 
     try {
-      auto analysisResults = SemanticAnalysis::analyze(ast.get());
+      auto analysisResults = SemanticAnalysis::analyze(ast.get(), dt);
 
       if (ppretty) {
         FrontEnd::prettyprint(ast.get(), std::cout);
       }
 
-      if (ptypes) {
+      if (ptypes && !dt) {
         analysisResults->getTypeResults()->print(std::cout);
       } else if (psym) {
         analysisResults->getSymbolTable()->print(std::cout);

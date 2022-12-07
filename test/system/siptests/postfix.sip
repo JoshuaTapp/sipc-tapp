@@ -2,5 +2,8 @@ main() {
     var x;
     x = 0;
     x++;
-    return x; // return 1
+    if(x != 1) error x;
+    x--;
+    if(x != 0) error x;
+    return 0;
 }

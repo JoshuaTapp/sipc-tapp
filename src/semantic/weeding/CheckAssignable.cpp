@@ -14,7 +14,7 @@ bool isAssignable(ASTExpr *e) {
     return true;
   }
   if (dynamic_cast<ASTArraySubscriptExpr *>(e)) {
-    return isAssignable(dynamic_cast<ASTArraySubscriptExpr *>(e)->getArray());
+    return true;
   }
   if (dynamic_cast<ASTAccessExpr *>(e)) {
     ASTAccessExpr *access = dynamic_cast<ASTAccessExpr *>(e);
@@ -62,17 +62,6 @@ void CheckAssignable::endVisit(ASTRefExpr *element) {
   std::ostringstream oss;
   oss << "Address of error on line " << element->getLine() << ": ";
   oss << *element->getVar() << " not an l-value\n";
-  throw SemanticError(oss.str());
-}
-
-void CheckAssignable::endVisit(ASTArraySubscriptExpr *element) {
-  LOG_S(1) << "Checking assignability of " << *element;
-  if (isAssignable(element->getArray()))
-    return;
-
-  std::ostringstream oss;
-  oss << "Array subscript error on line " << element->getLine() << ": ";
-  oss << *element->getArray() << " not an l-value\n";
   throw SemanticError(oss.str());
 }
 

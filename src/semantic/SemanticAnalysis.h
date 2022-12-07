@@ -19,6 +19,7 @@ class SemanticAnalysis {
   std::unique_ptr<SymbolTable> symTable;
   std::unique_ptr<TypeInference> typeResults;
   std::unique_ptr<CallGraph> callGraph;
+  bool *disableTypeChecking;
 
 public:
   SemanticAnalysis(std::unique_ptr<SymbolTable> s,
@@ -36,7 +37,8 @@ public:
    * \param ast The program AST
    * \return The unique pointer to the semantic analysis structure.
    */
-  static std::unique_ptr<SemanticAnalysis> analyze(ASTProgram *ast);
+  static std::unique_ptr<SemanticAnalysis>
+  analyze(ASTProgram *ast, bool disableTypeChecking = false);
 
   /*! \fn getSymbolTable
    *  \brief Returns the symbol table computed for the program.
@@ -56,4 +58,3 @@ public:
    */
   CallGraph *getCallGraph();
 };
-

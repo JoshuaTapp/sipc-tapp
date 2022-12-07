@@ -64,7 +64,7 @@ expr:
 	| expr op = LOR expr # logicalOrExpr
 
 	// Precendence 13
-	| expr '?' expr ':' expr # ternaryExpr
+	| expr '?' ((expr) ':' (expr)) # ternaryExpr
 
 	// ETC
 	| IDENTIFIER	# varExpr
