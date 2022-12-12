@@ -1,0 +1,13 @@
+main(x) {
+    var n, i, sum, rec;
+    n = 10000;
+    i = 0;
+    sum = 0;
+
+    while(n > i) {
+        sum = sum + x;
+        i = i + 1;
+    }
+
+    return sum;
+}

@@ -1,0 +1,14 @@
+main(x) {
+    var n, i, sum;
+
+    n = 100000;
+    i = 0;
+    sum = 1;
+
+    while (n > i) {
+        sum = sum + x + i;
+        i = i + 1;
+    }
+
+    return sum;
+}
