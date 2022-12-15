@@ -53,6 +53,13 @@ static cl::opt<std::string> outputfile("o", cl::value_desc("outputfile"),
                                        cl::desc("write output to <outputfile>"),
                                        cl::cat(TIPcat));
 
+// add support for -O=0, -O=1, -O=2, ..., -O=10
+static cl::opt<int> optLevel("O", cl::desc("Optimization level"),
+                             cl::value_desc("level"), cl::init(0),
+                             cl::cat(TIPcat));
+
+
+
 /*! \brief tipc driver.
  *
  * This function is the entry point for tipc.   It handles command line parsing
@@ -127,7 +134,7 @@ int main(int argc, char *argv[]) {
           CodeGenerator::generate(ast.get(), analysisResults.get(), sourceFile);
 
       if (!disopt) {
-        Optimizer::optimize(llvmModule.get());
+        Optimizer::optimize(llvmModule.get(), optLevel);
       }
 
       if (emitHrAsm) {

@@ -1,7 +1,9 @@
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <mach/mach.h>
 #include <mach/mach_vm.h>
+#include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -16,6 +18,37 @@ struct ProgramMetrics {
 };
 
 // TODO: IF I have time, translate this to run on Linux
+std::string printFormattedDoubles(double fileSizeRatio, double excTimeRatio,
+                                  double memAccessRatio, double score) {
+  std::stringstream ss;
+  ss << std::fixed << std::setprecision(4);
+
+  // print score
+  ss << std::setw(8) << (score >= 0 ? "+" : "") << score << " | ";
+
+  // print fileSizeRatio
+  if (fileSizeRatio == 0) {
+    ss << std::setw(8) << "0"
+       << " | ";
+  } else {
+    ss << std::setw(8) << (fileSizeRatio >= 0 ? "+" : "") << fileSizeRatio
+       << " | ";
+  }
+
+  // print excTimeRatio
+  ss << std::setw(8) << (excTimeRatio >= 0 ? "+" : "") << excTimeRatio << " | ";
+
+  // print memAccessRatio
+  if (memAccessRatio == 0) {
+    ss << std::setw(8) << "0";
+  } else {
+    ss << std::setw(8) << (memAccessRatio >= 0 ? "+" : "") << memAccessRatio;
+  }
+
+  ss << endl;
+
+  return ss.str();
+}
 
 ProgramMetrics measureProgramMac(const string &program,
                                  const string &args = "") {
@@ -35,14 +68,14 @@ ProgramMetrics measureProgramMac(const string &program,
   // Execute the program
   string cmd = "./" + program + " " + args + " > /dev/null";
   int ret = system(cmd.c_str());
-  if (ret != 0) {
-    cerr << "Error: cannot execute " << program << endl;
-    return metrics;
-  }
 
   // Stop the clock
   steady_clock::time_point stop = steady_clock::now();
 
+  if (ret != 0) {
+    cerr << "Error: cannot execute " << program << endl;
+    return metrics;
+  }
   // Calculate the execution time of the program
   duration<double> elapsed = duration_cast<duration<double>>(stop - start);
   metrics.excTime = elapsed.count();
@@ -117,9 +150,10 @@ std::string comparePrograms(const string &program1, const string &program2,
 
   double score =
       0.5 * excTimeRatio + 0.3 * memAccessRatio + 0.2 * fileSizeRatio;
+  // print the results in a table
 
-  return "\t" + to_string(score) + "\t|\t" + to_string(fileSizeRatio) +
-         "\t|\t" + to_string(excTimeRatio) + "\t|\t" + to_string(memAccessDiff);
+  return printFormattedDoubles(fileSizeRatio, excTimeRatio, memAccessRatio,
+                               score);
 }
 
 /*
@@ -132,8 +166,8 @@ std::string comparePrograms(const string &program1, const string &program2,
  *     Where +x indicates that program 1 is better than program 2
  *
  * The score is calculated by the weighted ratio of the metrics.
- * Where execution time is the most important factor, followed by memory access
- * and file size.
+ * Where execution time is the most important factor, followed by memory
+ * access and file size.
  *
  * Include the number of tests to run as the third argument (default is 30)
  * if you want to eliminate even more noise.
@@ -163,7 +197,7 @@ int main(int argc, char *argv[]) {
   string program1 = argv[1];
   string program2 = argv[2];
 
-  cout << comparePrograms(program1, program2, k, args) << endl;
+  cout << comparePrograms(program1, program2, 5, args) << endl;
 
   return 0;
 }

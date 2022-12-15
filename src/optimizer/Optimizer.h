@@ -12,5 +12,6 @@ public:
    * Apply a series of basic optimization passes to the given LLVM module.
    * \param theModule an LLVM module to be optimized
    */
-  static void optimize(llvm::Module *theModule, int optLevel = 0);
+  static void optimize(llvm::Module *theModule, int optLevel);
+
 };
